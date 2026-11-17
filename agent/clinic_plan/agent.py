@@ -20,6 +20,7 @@ from google.adk.agents import LlmAgent, LoopAgent, ParallelAgent, SequentialAgen
 from toolbox_adk import ToolboxToolset  # noqa: E402
 
 from . import steps  # noqa: E402
+from .toolbox_bridge import auth_headers  # noqa: E402
 
 MODEL = os.environ.get("MODEL", "gemini-3.6-flash")
 TOOLBOX_URL = os.environ.get("TOOLBOX_URL", "http://127.0.0.1:5055")
@@ -101,7 +102,8 @@ planner = LlmAgent(
     model=MODEL,
     description="Context A. Picks four Saturday stops from score_need candidates. Blind to demographics.",
     instruction=PLANNER_INSTRUCTION,
-    tools=[steps.stop_distances, ToolboxToolset(server_url=TOOLBOX_URL, toolset_name="planner_drilldown")],
+    tools=[steps.stop_distances, ToolboxToolset(server_url=TOOLBOX_URL, toolset_name="planner_drilldown",
+                                                 additional_headers=auth_headers())],
     include_contents="none",          # never sees the Auditor's tool results in the conversation
     output_key="draft_plan",
 )
@@ -111,7 +113,8 @@ auditor = LlmAgent(
     model=MODEL,
     description="Context B. Audits the draft plan with data the Planner cannot see.",
     instruction=AUDITOR_INSTRUCTION,
-    tools=[steps.check_plan, ToolboxToolset(server_url=TOOLBOX_URL, toolset_name="auditor")],
+    tools=[steps.check_plan, ToolboxToolset(server_url=TOOLBOX_URL, toolset_name="auditor",
+                                                     additional_headers=auth_headers())],
     include_contents="none",
     output_key="audit_verdict",
 )

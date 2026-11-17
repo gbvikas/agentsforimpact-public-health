@@ -1,0 +1,9 @@
+.venv/
+.git/
+toolbox/bin/
+notebooks/
+docs/
+agent/runs/*.json
+agent/memory_store.json
+agent/clinic_plan/.env
+**/__pycache__/
