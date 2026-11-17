@@ -5,7 +5,7 @@ metadata:
   node_type: memory
   type: project
   originSessionId: e580f079-8de7-49f4-9f0f-bb27f2a97aee
-  modified: 2026-11-17T19:25:41.205Z
+  modified: 2026-11-17T20:12:34.570Z
 ---
 
 Status 2026-11-17: brainstorm stage, nothing decided by user yet. Update this as decisions land.
@@ -30,6 +30,8 @@ Idea: several ranking "lenses" (need-first, access-first, combined); tracts that
 
 **Ideas worth keeping:** "why not next door" tool (nearest unchosen neighbor tract + what differs, honest when CIs overlap); custom UI showing planner vs auditor disagreement live + map with 4 Saturdays; field-report agent stretch (NP debrief → BigQuery append → planner revises).
 
-**Open decisions (user's call):** track to demo · county (Fulton = best story but no HPSA; Cook = complete data) · exact "needs the van" formula · front end (adk web vs custom) · MCP choice (lean Toolbox) · deploy target.
+**County in BigQuery = Cook IL 17031** (team loaded it; see [[cook-data-profile]] — distance anti-correlates with need there, HPSA is tract-level).
+
+**Open decisions (user's call):** track to demo · confirm Cook · exact "needs the van" formula · front end (adk web vs custom) · MCP choice (lean Toolbox) · deploy target.
 
 See [[challenge-core]], [[data-traps]], [[adk-api-gotchas]].
