@@ -4,196 +4,303 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>EquiVita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
-:root{--bg:#f7f4ee;--card:#fffdf9;--ink:#1f2a37;--muted:#6b7280;--line:#e8e2d6;--brand:#0f766e;--brand-soft:#dff3ef;
---sun:#d97706;--sun-soft:#fdf0dc;--ok:#15803d;--ok-soft:#e3f5e8;--alert:#9a3412;--alert-soft:#fdebe1}
-@media (prefers-color-scheme:dark){:root{--bg:#121614;--card:#1a201e;--ink:#e7ece9;--muted:#9aa5a0;--line:#2a332f;--brand:#4fd1c0;--brand-soft:#173430;
---sun:#f5a524;--sun-soft:#3a2b12;--ok:#5fd38a;--ok-soft:#173523;--alert:#fb9a6a;--alert-soft:#3b2117}}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
-a{color:var(--brand)}
-.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
-header{background:var(--card);border-bottom:1px solid var(--line)}
-.top{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:18px 0}
-.logo{font-size:24px;font-weight:800;letter-spacing:-.02em}.logo span{color:var(--brand)}
-.tag{color:var(--muted);font-size:14px}
-.grow{flex:1}
-button{font:inherit;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:9px 16px;cursor:pointer}
-button.primary{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
-button:disabled{opacity:.55;cursor:default}
-h2{font-size:20px;margin:28px 0 12px}h3{margin:0 0 6px;font-size:17px}
-.muted{color:var(--muted)}.small{font-size:13px}
-.progress{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
-.stepc{padding:6px 12px;border-radius:999px;background:var(--line);color:var(--muted);font-size:13px}
-.stepc.done{background:var(--brand-soft);color:var(--brand)}.stepc.now{background:var(--sun-soft);color:var(--sun);font-weight:700}
-.stepc.back{background:var(--alert-soft);color:var(--alert);font-weight:700}
-.banner{margin-top:20px;border-radius:14px;padding:16px 18px;background:var(--alert-soft);border:1px solid var(--alert)}
-.banner h3{color:var(--alert)}
-.banner textarea{width:100%;min-height:60px;font:inherit;border-radius:10px;border:1px solid var(--line);padding:8px;background:var(--card);color:var(--ink)}
-.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
-@media (max-width:1000px){.cards{grid-template-columns:repeat(2,1fr)}}@media (max-width:620px){.cards{grid-template-columns:1fr}}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
-.date{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}.date .d{font-size:28px;font-weight:800;color:var(--brand)}
-.stat{display:flex;justify-content:space-between;gap:8px;border-top:1px dashed var(--line);padding:6px 0;font-size:14px}
-.stat b{white-space:nowrap}
-.why{margin:10px 0;font-size:14px}
-.box{background:var(--brand-soft);border-radius:10px;padding:8px 10px;font-size:13px;margin-top:8px}
-.box.alt{background:var(--sun-soft)}
-.badge{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--ok-soft);color:var(--ok)}
-.badge.warn{background:var(--alert-soft);color:var(--alert)}
-.two{display:grid;grid-template-columns:3fr 2fr;gap:16px}@media (max-width:900px){.two{grid-template-columns:1fr}}
-#map{height:420px;border-radius:12px}
-.flyer{white-space:normal}.flyer h4{margin:14px 0 4px;font-size:15px}
-.tabs{display:flex;gap:6px;margin-bottom:10px}.tabs button.on{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);font-weight:700}
-.limit{padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
-.empty{color:var(--muted);font-style:italic}
-footer{padding:30px 0 40px;color:var(--muted);font-size:13px}
-@media print{header,.progress,.banner,#mapCard,#goodCard,#memCard,footer,.tabs,.noprint{display:none!important}body{background:#fff}}
+:root{
+  --bg:#f5f4f0;--surface:#fbfaf7;--ink:#2b2a27;--muted:#77746d;--faint:#a5a29a;--line:#e5e2db;--soft:#eeece6;
+  --accent:#5f6b82;--accent-soft:#e9ebf0;--ok:#62806a;--ok-soft:#e8eee7;--warn:#a2793f;--warn-soft:#f2ebdd;
+  --bad:#a35d54;--bad-soft:#f2e5e1;--bar:#d3d0c8;--ref:#4b4a45;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141413;--surface:#1b1b19;--ink:#ecebe6;--muted:#a09d95;--faint:#73706a;--line:#2a2a27;--soft:#222220;
+  --accent:#97a3bb;--accent-soft:#25282f;--ok:#8fb09a;--ok-soft:#1d2620;--warn:#cfa468;--warn-soft:#2a2418;
+  --bad:#cf8c83;--bad-soft:#2c1f1c;--bar:#3d3c38;--ref:#cfccc4;}}
+:root[data-theme="dark"]{--bg:#141413;--surface:#1b1b19;--ink:#ecebe6;--muted:#a09d95;--faint:#73706a;--line:#2a2a27;--soft:#222220;
+  --accent:#97a3bb;--accent-soft:#25282f;--ok:#8fb09a;--ok-soft:#1d2620;--warn:#cfa468;--warn-soft:#2a2418;
+  --bad:#cf8c83;--bad-soft:#2c1f1c;--bar:#3d3c38;--ref:#cfccc4;}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 Inter,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+header{position:sticky;top:0;z-index:1000;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:16px;height:60px}
+.brand{font-weight:800;font-size:19px;letter-spacing:-.02em}.brand em{font-style:normal;color:var(--accent)}.brand span{color:var(--muted);font-weight:500;margin-left:12px;font-size:13px;letter-spacing:0}@media(max-width:1000px){.brand span{display:none}}
+nav{display:flex;gap:4px;margin-left:auto}
+nav a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:500;padding:6px 10px;border-radius:8px}
+nav a:hover{color:var(--ink);background:var(--soft)}
+button,select{font:inherit;font-size:13px;font-weight:500;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;cursor:pointer}
+button.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+button:disabled{opacity:.45;cursor:default}
+#status{font-size:12px;color:var(--muted)}
+main>section{padding:34px 32px 32px;margin-top:0;background:var(--surface);border:1px solid var(--line);border-radius:24px;scroll-margin-top:76px}
+main>section .card,main>section .stat{background:var(--bg)}
+main>section tr.chosen td{background:var(--accent-soft)}
+main>section .nb{background:var(--bg)}
+.eyebrow{display:flex;align-items:center;gap:12px}
+.eyebrow .num{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;font-size:15px;letter-spacing:0}
+.eyebrow .ctx{margin-left:auto;font-size:11.5px;letter-spacing:0;text-transform:none;font-weight:600;padding:3px 10px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.handoff{display:flex;flex-direction:column;align-items:center;padding:0;color:var(--muted);font-size:12.5px}
+.handoff:before,.handoff:after{content:"";width:2px;height:26px;background:var(--line)}
+.handoff span{padding:6px 14px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-weight:500}
+.handoff span b{color:var(--ink);font-weight:600}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+h2{font-size:26px;letter-spacing:-.02em;margin:6px 0 4px;font-weight:700}
+.lede{color:var(--muted);margin:0 0 24px;max-width:620px}
+h3{font-size:13px;font-weight:600;margin:28px 0 10px;color:var(--muted);letter-spacing:.02em}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.stat b{display:block;font-size:24px;letter-spacing:-.02em}.stat span{font-size:12px;color:var(--muted)}
+.chip{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.chip.accent{background:var(--accent-soft);color:var(--accent)}.chip.ok{background:var(--ok-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}.chip.bad{background:var(--bad-soft);color:var(--bad)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;font-size:11.5px;font-weight:600;color:var(--faint);padding:0 10px 8px;letter-spacing:.03em}
+td{padding:11px 10px;border-top:1px solid var(--line);vertical-align:middle}
+tr.chosen td{background:var(--accent-soft)}tr.chosen td:first-child{border-radius:10px 0 0 10px}tr.chosen td:last-child{border-radius:0 10px 10px 0}
+.num{font-variant-numeric:tabular-nums}
+.sat{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:700}
+.meter{display:flex;gap:10px}
+.m{width:46px}.m i{display:block;height:5px;border-radius:3px;background:var(--bar);position:relative;overflow:hidden}
+.m i u{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:3px}
+.m small{display:block;font-size:10px;color:var(--faint);margin-top:3px;text-align:center}
+.two{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+@media(max-width:860px){.two,.stats{grid-template-columns:1fr}.meter{display:none}nav{display:none}}
+#map{height:420px;border-radius:10px}
+.stop{padding:14px 0;border-top:1px solid var(--line)}.stop:first-child{border-top:0;padding-top:0}
+.stop h4{margin:0 0 4px;font-size:14px;display:flex;gap:8px;align-items:center}
+.stop p{margin:0;color:var(--muted);font-size:13.5px}
+.caveat{display:grid;grid-template-columns:200px 1fr;gap:4px 16px;font-size:13.5px}
+.caveat dt{font-weight:600}.caveat dd{margin:0;color:var(--muted)}
+@media(max-width:700px){.caveat{grid-template-columns:1fr}}
+.verdict{display:flex;gap:14px;align-items:flex-start;border-radius:16px;padding:18px 20px}
+.verdict.cleared{background:var(--ok-soft)}.verdict.needs_human{background:var(--warn-soft)}.verdict.revise{background:var(--bad-soft)}
+.verdict .dot{width:10px;height:10px;border-radius:50%;margin-top:7px;flex:none}
+.cleared .dot{background:var(--ok)}.needs_human .dot{background:var(--warn)}.revise .dot{background:var(--bad)}
+.verdict b{font-size:17px;display:block;letter-spacing:-.01em}.verdict p{margin:4px 0 0;color:var(--muted);font-size:13.5px}
+.checks{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px 24px}
+@media(max-width:700px){.checks{grid-template-columns:1fr}}
+.checks li{display:flex;gap:10px;align-items:center;font-size:13.5px}
+.tick{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.tick.p{background:var(--ok-soft);color:var(--ok)}.tick.f{background:var(--bad-soft);color:var(--bad)}.tick.n{background:var(--soft);color:var(--muted)}
+.grp{display:grid;grid-template-columns:130px 1fr 74px;gap:12px;align-items:center;margin:14px 0}
+.grp .lbl{font-size:13.5px;font-weight:500}.tr{height:7px;border-radius:4px;background:var(--soft);margin:3px 0;overflow:hidden}
+.tr i{display:block;height:100%;border-radius:4px}.tr.plan i{background:var(--accent)}.tr.need i{background:var(--ref)}.tr.county i{background:var(--bar)}
+.gap{font-weight:600;font-variant-numeric:tabular-nums;text-align:right;font-size:13.5px}.gap.big{color:var(--bad)}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-bottom:4px;flex-wrap:wrap}
+.legend span:before{content:"";display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;background:var(--c)}
+.decide{margin-top:16px;border-top:1px solid var(--line);padding-top:16px}
+.decide input{width:100%;font:inherit;font-size:13.5px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);margin:8px 0 10px}
+.seg{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px;margin-bottom:20px}
+.seg button{border:0;background:transparent;color:var(--muted)}.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:860px){.cards{grid-template-columns:1fr}}
+.nb{background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.nb .top{padding:18px 20px 14px;display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,var(--accent-soft),transparent)}
+.nb .top .sat{width:34px;height:34px;font-size:15px}.nb .top b{display:block;font-size:16px;letter-spacing:-.01em}.nb .top small{color:var(--muted)}
+.nb .body{padding:0 20px 20px}
+.why{font-size:13px;color:var(--muted);margin:0 0 14px}
+.flyer{background:var(--accent-soft);border-radius:14px;padding:14px 16px;font-size:14px;margin-bottom:10px}
+.flyer b{display:block;margin-bottom:4px}
+.say{border-left:3px solid var(--accent);padding:2px 0 2px 14px;font-size:14px;color:var(--ink)}
+.say small{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
+details{margin-top:56px;border-top:1px solid var(--line);padding:18px 0}
+summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--muted)}
+.empty{color:var(--faint);font-style:italic}
+footer{padding:40px 0 80px;color:var(--faint);font-size:12px}
+@media print{header,section:not(#communicator),details,footer,.seg,.printhide{display:none!important}.nb{break-inside:avoid}body{background:#fff}}
 </style>
 </head>
 <body>
-<header><div class="wrap">
-  <div class="top">
-    <div><div class="logo">Equi<span>Vita</span></div><div class="tag">Where should the mobile clinic park next month — and why.</div></div>
-    <div class="grow"></div>
-    <span class="small muted" id="approach"></span>
-    <button class="primary" id="runBtn">Plan next month</button>
-    <a href="/console" class="small">How we decided →</a>
-  </div>
-  <div class="progress" id="progress" hidden></div>
-  <div style="height:14px"></div>
+<header><div class="wrap bar">
+  <div class="brand">Equi<em>Vita</em><span>Where the mobile clinic parks next month, and why</span></div>
+  <nav><a href="#planner">Planner</a><a href="#plan">Plan</a><a href="#auditor">Auditor</a><a href="#communicator">Neighbors</a></nav>
+  <select id="runSel"></select>
+  <button class="primary" id="runBtn">Run planner</button>
 </div></header>
 
-<div class="wrap">
-  <div id="banner"></div>
+<main class="wrap">
+  <div id="status" style="padding-top:14px"></div>
 
-  <h2 id="calTitle">Next month's four Saturdays</h2>
-  <div class="cards" id="cards"><div class="empty">No plan yet. Press “Plan next month”.</div></div>
+  <section id="planner">
+    <div class="eyebrow"><span class="num">1</span>Planner<span class="ctx">Blind to demographics</span></div>
+    <h2>What the planner looked at</h2>
+    <p class="lede">Every census tract in the county was scored from public data. The planner never sees race or ethnicity, only where people are uninsured, far from care, or without a car.</p>
+    <div class="stats" id="stats"></div>
+    <h3>Top candidates</h3>
+    <div class="card" style="padding:14px 10px"><div id="cands" class="empty" style="padding:6px 10px">Pick a run.</div></div>
+    <h3>Data used</h3>
+    <div class="card" style="padding:14px 10px"><div id="sources"></div></div>
+    <h3>What the data cannot tell us</h3>
+    <div class="card"><dl class="caveat" id="limits"></dl></div>
+  </section>
+  <div class="handoff"><span>Planner picks <b>four stops</b></span></div>
 
-  <div class="two" style="margin-top:16px">
-    <div class="card" id="mapCard"><h3>On the map</h3><div id="map"></div>
-      <div class="small muted" style="margin-top:6px">Shaded dots: every neighborhood; darker means greater need for the van. Numbered pins: the four Saturdays.</div></div>
-    <div class="card" id="memCard"><h3>What EquiVita remembers</h3><div id="memory" class="small"></div></div>
-  </div>
+  <section id="plan">
+    <div class="eyebrow"><span class="num">2</span>Plan<span class="ctx">Four stops, one per Saturday</span></div>
+    <h2>Where the van goes</h2>
+    <p class="lede">One stop per Saturday, spread at least 5 km apart so the van reaches different communities.</p>
+    <div class="two"><div id="map"></div><div class="card" id="stops"></div></div>
+  </section>
+  <div class="handoff"><span>Plan goes to the <b>Auditor</b>, who has not seen the planner’s reasoning</span></div>
 
-  <div class="two" style="margin-top:16px">
-    <div class="card"><div style="display:flex;align-items:center;gap:8px"><h3 style="margin:0">Flyers &amp; door script</h3><div class="grow"></div>
-      <button class="noprint" onclick="window.print()">Print</button></div>
-      <div class="small muted" style="margin:4px 0 10px">Plain-language text for community health workers. Free check-ups, no insurance needed.</div>
-      <div class="tabs"><button data-l="en" class="on">English</button><button data-l="es">Español</button></div>
-      <div id="flyer" class="flyer empty">No flyer yet.</div></div>
-    <div class="card" id="goodCard"><h3>Good to know before you share this</h3>
-      <div class="small muted" style="margin-bottom:6px">What the data can't tell us, in plain words.</div><div id="limits" class="empty">—</div></div>
-  </div>
-  <footer>EquiVita plans places, not people. It uses public, neighborhood-level federal data only and gives no medical advice.
-    A planning agent never sees race or ethnicity; a separate fairness check does, and any concern comes to you, not back to the planner.</footer>
-</div>
+  <section id="auditor">
+    <div class="eyebrow"><span class="num">3</span>Auditor<span class="ctx">Sees demographics · separate context</span></div>
+    <h2>Does the plan hold up?</h2>
+    <p class="lede">A separate reviewer checks the plan without trusting it. It is the only part that sees race and ethnicity, and it compares the chosen tracts with the highest-need tracts.</p>
+    <div id="verdict"></div>
+    <h3>Checks</h3><div class="card"><ul class="checks" id="checks"></ul></div>
+    <h3>Who the plan reaches</h3>
+    <div class="card" id="demo"></div>
+    <div id="decision"></div>
+  </section>
+  <div class="handoff"><span>Only <b>cleared facts</b> go to the writer</span></div>
+
+  <section id="communicator">
+    <div class="eyebrow"><span class="num">4</span>Neighbors<span class="ctx">Audit-cleared facts only</span></div>
+    <h2>Telling each neighborhood</h2>
+    <p class="lede">Plain-language flyers and a short script for community health workers, in English and Spanish. Only facts that passed the audit are used.</p>
+    <div class="seg printhide"><button id="en" class="on">English</button><button id="es">Español</button></div>
+    <div class="printhide" style="float:right"><button onclick="window.print()">Print</button></div>
+    <div class="cards" id="neigh"></div>
+  </section>
+
+  <details><summary>Run details · memory and claims</summary>
+    <div id="memory" style="margin-top:14px"></div>
+    <div style="margin-top:14px"><button id="resetBtn">Reset memory</button></div>
+    <div id="claims" style="margin-top:18px;overflow:auto"></div>
+  </details>
+  <footer>EquiVita plans places, not people. Tract-level figures are modeled or survey estimates. Distances are straight-line to federal sites only.</footer>
+</main>
 
 <script>
-const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const api=(p,o)=>fetch(p,o).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
-let map,layer,poll,lang='en',outreach='';
+const post=(p,b)=>api(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})});
+let RUN=null,LANG='en',map,layer,poll;
+const GROUPS=[['pct_black','black_pop','Black'],['pct_hispanic','hispanic_pop','Hispanic'],['pct_white_non_hispanic','white_pop','White, non-Hispanic'],['pct_asian','asian_pop','Asian']];
 
-const STEPS=[["recall_memory","Remembering past months"],["lookups","Gathering neighborhood data"],["score_need","Scoring every neighborhood"],
- ["planner","Drafting four Saturdays"],["auditor","Fairness & accuracy check"],["explainer","Writing flyers (EN + ES)"],["limits_and_persist","Saving the plan"]];
-const STEP_OF={lookup_tracts:"lookups",lookup_context:"lookups",audit_gate:"auditor",finalize_plan:"explainer"};
+/* ---------- 1 Planner ---------- */
+function renderPlanner(r){
+  const m=r.score_meta||{},stops=(r.final_plan?.stops||[]).map(s=>s.geo_id),sat={};
+  (r.final_plan?.stops||[]).forEach(s=>sat[s.geo_id]=s.saturday);
+  $('#stats').innerHTML=`<div class="stat"><b>${(m.n_scored||0).toLocaleString()}</b><span>census tracts scored</span></div>
+   <div class="stat"><b>${esc(m.config_version||'')}</b><span>score version</span></div>
+   <div class="stat"><b>${(r.candidates||[]).length}</b><span>candidates shortlisted</span></div>`;
+  const rows=(r.candidates||[]).slice(0,10);
+  const M=(c,k,l)=>c.components?`<div class="m" title="${l}: ${(c.components[k]*100).toFixed(0)}th percentile in county"><i><u style="width:${c.components[k]*100}%"></u></i><small>${l}</small></div>`:'';
+  $('#cands').classList.remove('empty');
+  $('#cands').innerHTML=`<table><tr><th>#</th><th>Tract</th><th>Score</th><th>Why it scored</th><th class="num">Uninsured</th><th class="num">No car</th><th class="num">To clinic</th></tr>
+  ${rows.map(c=>`<tr class="${stops.includes(c.geo_id)?'chosen':''}"><td class="num">${c.rank}</td>
+   <td>${stops.includes(c.geo_id)?`<span class="sat">${sat[c.geo_id]}</span> `:''}${esc(c.geo_id)}</td><td class="num"><b>${c.score.toFixed(2)}</b></td>
+   <td><div class="meter">${M(c,'uninsured','Insur.')}${M(c,'chronic','Chronic')}${M(c,'no_vehicle','No car')}${M(c,'limited_english','English')}${M(c,'carless_km','Distance')}</div></td>
+   <td class="num">${c.pct_uninsured}%</td><td class="num">${c.pct_no_vehicle}%</td><td class="num">${c.km_to_safety_net} km</td></tr>`).join('')}</table>
+  <div style="padding:10px 10px 0;font-size:12px;color:var(--muted)">Formula: ${esc(m.formula||'')}. ${esc(m.why||'')} Bars show where the tract ranks within the county.</div>`;
+  const by={};Object.values(r.claims||{}).filter(c=>c.scale==='tract'&&c.measure!=='score').forEach(c=>{by[c.measure]??=c});
+  const kind=c=>c.caveats.includes('MODELED_PREVALENCE')?['Modeled','warn']:c.caveats.includes('SURVEY_ESTIMATE')?['Survey estimate','accent']:['Measured','ok'];
+  const label={pct_uninsured:'Uninsured adults',pct_diabetes:'Diabetes',pct_no_vehicle:'Households without a car',pct_limited_english:'Limited English',km_to_safety_net:'Distance to free clinic',hpsa_score:'Federal shortage score'};
+  $('#sources').innerHTML=`<table><tr><th>Measure</th><th>Source</th><th>Kind</th><th>As of</th></tr>${Object.values(by).map(c=>{const[k,t]=kind(c);
+   return `<tr><td>${esc(label[c.measure]||c.measure)}</td><td class="num" style="color:var(--muted)">${esc(c.source)}</td><td><span class="chip ${t}">${k}</span></td><td style="color:var(--muted)">${esc(c.as_of)}</td></tr>`}).join('')}</table>`;
+  $('#limits').innerHTML=(r.limits||[]).filter(l=>l.what&&l.what!=='—').map(l=>`<dt>${esc(l.what)}</dt><dd>${esc(l.why)}</dd>`).join('')||'<dd class="empty">None recorded.</dd>';
+}
 
-function renderProgress(evs,running){
-  const seen=new Set(evs.map(e=>STEP_OF[e.author]||e.author));const last=evs.length?(STEP_OF[evs[evs.length-1].author]||evs[evs.length-1].author):null;
-  const sentBack=evs.some(e=>e.author==='audit_gate'&&/REVISE/.test(e.text)&&/Sending revise/.test(e.text));
-  $('#progress').hidden=false;
-  $('#progress').innerHTML=STEPS.map(([k,l])=>{let c=seen.has(k)?'done':'';if(running&&k===last)c='now';
-    let extra=k==='auditor'&&sentBack?' · sent a draft back ↺':'';return `<span class="stepc ${c} ${extra?'back':''}">${seen.has(k)&&!(running&&k===last)?'✓ ':''}${l}${extra}</span>`}).join('')}
+/* ---------- 2 Plan ---------- */
+function renderPlan(r){
+  const st=r.final_plan?.stops||[],sc=r.all_scores||[];
+  if(!map){map=L.map('map').setView([41.84,-87.75],10);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:16}).addTo(map)}
+  layer?.remove();layer=L.layerGroup().addTo(map);
+  if(sc.length){const mx=Math.max(...sc.map(s=>s.score)),mn=Math.min(...sc.map(s=>s.score));
+    sc.forEach(s=>{const v=(s.score-mn)/(mx-mn||1);L.circleMarker([s.latitude,s.longitude],{radius:3,stroke:false,fillOpacity:.15+.75*v*v,fillColor:'#2f5bd3'})
+     .bindTooltip(`${s.geo_id} · rank ${s.rank}<br>uninsured ${s.pct_uninsured}% · no car ${s.pct_no_vehicle}% · ${s.km_to_safety_net} km`).addTo(layer)})}
+  const pts=[];st.forEach(s=>{const t=sc.find(x=>x.geo_id===s.geo_id);if(!t)return;pts.push([t.latitude,t.longitude]);
+    L.marker([t.latitude,t.longitude],{icon:L.divIcon({className:'',html:`<div style="background:#c2620f;color:#fff;border-radius:50%;width:26px;height:26px;display:grid;place-items:center;font-weight:700;border:2px solid #fff">${s.saturday}</div>`})})
+     .bindPopup(`<b>Saturday ${s.saturday}</b> · ${s.geo_id}<br>${esc(s.reason)}`).addTo(layer)});
+  if(pts.length)map.fitBounds(pts,{padding:[60,60],maxZoom:12});setTimeout(()=>map.invalidateSize(),50);
+  $('#stops').innerHTML=st.map(s=>`<div class="stop"><h4><span class="sat">${s.saturday}</span>Saturday · tract ${esc(s.geo_id)}</h4><p>${esc(s.reason)}</p></div>`).join('')
+   +(r.final_plan?.tradeoffs?`<div class="stop"><h4>Trade-offs</h4><p>${esc(r.final_plan.tradeoffs)}</p></div>`:'')}
 
-function nextMonthSaturdays(){const n=new Date();const d=new Date(n.getFullYear(),n.getMonth()+1,1);const out=[];
-  while(out.length<4){if(d.getDay()===6)out.push(new Date(d));d.setDate(d.getDate()+1)}return out}
-function oneIn(p){if(p==null)return'—';if(p>=8)return`about 1 in ${Math.round(100/p)}`;return`${p}%`}
-function tractName(g){const t=g.slice(5);const n=parseInt(t.slice(0,4),10);const s=t.slice(4);return`Census tract ${n}${s!=='00'?'.'+s:''}`}
+/* ---------- 3 Auditor ---------- */
+const CHECKS=[['NOT_A_CANDIDATE','Four stops, all from the shortlist'],['STOPS_TOO_CLOSE','Stops are 5 km or more apart'],['UNKNOWN_CLAIM','Every cited fact exists'],
+ ['SCALE_MISUSE','County or regional data not used to pick a tract'],['OVERCLAIM_TIE','No ranking claims inside a tie'],['DEMOGRAPHIC_DISPARITY','Plan reaches the highest-need tracts']];
+function status(r){return r.audit_status||((r.human_flags||[]).length?'needs_human':(r.audit_passed?'cleared':'revise'))}
+function renderAuditor(r){
+  const rounds=r.rounds||[],last=rounds[rounds.length-1]||{},flags=last.flags||[],s=status(r);
+  const T={cleared:['Cleared','The plan passed every check.'],needs_human:['Needs your decision','Every rule check passed, but the plan does not reach the same people as the highest-need tracts. Only a person can decide what to do about that.'],revise:['Sent back for revision','The auditor found problems the planner has to fix.']}[s];
+  $('#verdict').innerHTML=`<div class="verdict ${s}"><span class="dot"></span><div><b>${T[0]}</b><p>${T[1]}</p>${last.auditor_summary?`<p style="margin-top:10px;color:var(--ink)">“${esc(last.auditor_summary)}”</p>`:''}
+   <p style="margin-top:8px;font-size:12px">${rounds.length} audit round${rounds.length===1?'':'s'}</p></div></div>`;
+  const has=c=>flags.some(f=>f.code===c);
+  $('#checks').innerHTML=CHECKS.map(([c,l])=>`<li><span class="tick ${has(c)?'f':'p'}">${has(c)?'!':'✓'}</span>${l}</li>`).join('')
+   +`<li><span class="tick n">i</span>${has('NO_INTERVAL')?'Close scores cannot be ranked (no confidence intervals)':'Score ties checked'}</li>`;
+  const d=last.demographics;
+  if(!d){$('#demo').innerHTML='<div class="empty">No demographic comparison in this run.</div>'}
+  else{const ps=d.per_stop||[];
+    $('#demo').innerHTML=`<div class="legend"><span style="--c:var(--accent)">Plan’s four tracts</span><span style="--c:var(--ref)">Highest-need tenth of tracts</span><span style="--c:var(--bar)">County</span></div>
+    ${GROUPS.map(([pk,k,l])=>{const p=d.plan[k],n=d.most_uninsured_tenth[k]??0,c=d.county?.[pk]??0,g=d.gap_vs_most_uninsured_pts[k],big=Math.abs(g)>d.threshold_pts;
+     return `<div class="grp"><div class="lbl">${l}</div><div><div class="tr plan"><i style="width:${p}%"></i></div><div class="tr need"><i style="width:${n}%"></i></div><div class="tr county"><i style="width:${c}%"></i></div></div>
+      <div class="gap ${big?'big':''}">${g>0?'+':''}${g} pts</div></div>`}).join('')}
+    <div style="font-size:12px;color:var(--muted)">Gap = plan minus highest-need tenth. Flagged above ${d.threshold_pts} points.</div>
+    ${ps.length?`<h3 style="margin-top:22px">Each stop</h3><table><tr><th>Stop</th><th>Tract</th>${GROUPS.map(g=>`<th class="num">${g[2].split(',')[0]}</th>`).join('')}</tr>
+     ${ps.map((x,i)=>`<tr><td><span class="sat">${(r.final_plan.stops.find(s=>s.geo_id===x.geo_id)||{}).saturday||i+1}</span></td><td>${esc(x.geo_id)}</td>${GROUPS.map(g=>`<td class="num">${x[g[0]]??'–'}%</td>`).join('')}</tr>`).join('')}</table>`:''}`}
+  renderDecision(r,s)}
+async function renderDecision(r,s){
+  const hf=r.human_flags||[];if(!hf.length||s==='cleared'){$('#decision').innerHTML='';return}
+  const mem=await api('/api/memory'),can=mem.approved_config!=='v1';
+  const dflt=can?'The first formula sent the van to remote suburbs. Need should lead, and distance should only count for households without a car.':'Four stops cannot mirror the whole highest-need group. Keep this version and add a stop in an under-served area next month.';
+  $('#decision').innerHTML=`<div class="card decide" style="margin-top:16px"><b>Your decision</b>
+   <div style="color:var(--muted);font-size:13.5px;margin-top:2px">Change the scoring weights, or accept this plan with the finding on record. Either choice is remembered.</div>
+   <input id="reason" value="${esc(dflt)}">${can?'<button class="primary" id="ap">Switch to v1 weights</button> ':''}<button id="ack">Accept plan, keep finding on record</button></div>`;
+  const done=async t=>{$('#decision').innerHTML=`<div class="card" style="margin-top:16px">${t}</div>`;renderMemory(await api('/api/memory'))};
+  if(can)$('#ap').onclick=async()=>{await post('/api/approve',{version:'v1',reason:$('#reason').value});done('Switched to v1 weights. Run the planner again to see the new plan.')};
+  $('#ack').onclick=async()=>{await post('/api/acknowledge',{reason:$('#reason').value});done('Plan accepted. The finding stays on record.')}}
 
-function renderCards(run){
-  const stops=run.final_plan?.stops||[];if(!stops.length){$('#cards').innerHTML='<div class="empty">No plan yet.</div>';return}
-  const sats=nextMonthSaturdays();$('#calTitle').textContent=`${sats[0].toLocaleString('en-US',{month:'long',year:'numeric'})}: four Saturdays`;
-  const cands=Object.fromEntries((run.candidates||[]).map(c=>[c.geo_id,c]));const det=Object.fromEntries((run.stop_details||[]).map(d=>[d.geo_id,d]));
-  const ok=run.audit_passed;
-  $('#cards').innerHTML=stops.map((s,i)=>{const c=cands[s.geo_id]||{};const d=det[s.geo_id]||{};const cl=d.clinic||{};const nd=d.next_door;const day=sats[(s.saturday||i+1)-1]||sats[i];
-    return `<div class="card"><div class="date"><span class="d">${day.getDate()}</span><span>${day.toLocaleString('en-US',{weekday:'long',month:'short'})}</span><span class="grow"></span>
-      ${ok?'<span class="badge">checked ✓</span>':'<span class="badge warn">open questions</span>'}</div>
-      <h3>${tractName(s.geo_id)}</h3><div class="small muted">${esc(s.geo_id)}</div>
-      <div class="stat"><span>Adults without insurance</span><b>${oneIn(c.pct_uninsured)}</b></div>
-      <div class="stat"><span>Homes without a car</span><b>${oneIn(c.pct_no_vehicle)}</b></div>
-      <div class="stat"><span>Limited English at home</span><b>${oneIn(c.pct_limited_english)}</b></div>
-      <div class="stat"><span>Nearest free clinic</span><b>${c.km_to_safety_net??'—'} km</b></div>
-      <div class="why">${esc(s.reason)}</div>
-      ${cl.name?`<div class="box"><b>After the visit:</b> ${esc(cl.name)}, ${esc(cl.address)}${cl.hours_per_week?` · open ${cl.hours_per_week} h/week`:''}</div>`:''}
-      ${nd?`<div class="box alt"><b>Why not next door?</b> ${tractName(nd.geo_id)} (${nd.km_away} km away): ${oneIn(nd.pct_uninsured)} uninsured, ${oneIn(nd.pct_no_vehicle)} without a car, ranked ${nd.rank} on need.</div>`:''}
-    </div>`}).join('')}
+/* ---------- 4 Neighbors ---------- */
+function parseOutreach(t){
+  const out={};(t||'').split(/^#\s+Saturday.*$/m).slice(1);
+  const heads=[...(t||'').matchAll(/^#\s+Saturday.*?(\d).*$/gm)];
+  const parts=(t||'').split(/^#\s+Saturday.*$/m).slice(1);
+  parts.forEach((p,i)=>{const n=heads[i]?heads[i][1]:i+1,o={en:{},es:{}};
+    p.split(/^##\s+/m).slice(1).forEach(sec=>{const lang=/^(Espa|Spanish)/i.test(sec)?'es':'en';
+      const subs=sec.split(/^###\s+/m).slice(1).map(x=>{const nl=x.indexOf('\n');return{title:x.slice(0,nl).trim(),body:x.slice(nl+1).trim().replace(/^---+$/gm,'').trim()}});
+      o[lang]={flyer:subs[0],say:subs[1]}});
+    out[n]=o});return out}
+const inline=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n+/g,'<br>');
+function renderNeighbors(r){
+  const O=parseOutreach(r.outreach),st=r.final_plan?.stops||[];
+  if(!st.length){$('#neigh').innerHTML='<div class="empty">No plan yet.</div>';return}
+  $('#neigh').innerHTML=st.map(s=>{const o=(O[s.saturday]||{})[LANG]||{},f=o.flyer,sy=o.say;
+   const clean=b=>(b||'').replace(/^\*\*[^\n]*\*\*\s*\n+/,'');
+   const sub=LANG==='en'?'Say at the door':'Para decir en la puerta';
+   return `<div class="nb"><div class="top"><span class="sat">${s.saturday}</span><div><b>${LANG==='en'?'Saturday':'Sábado'} ${s.saturday}</b><small>Tract ${esc(s.geo_id)}</small></div></div>
+    <div class="body"><p class="why">${esc(s.reason)}</p>
+    ${f?`<div class="flyer"><b>${LANG==='en'?'Flyer':'Folleto'}</b>${inline(clean(f.body))}</div>`:'<div class="empty">No cleared facts for this stop.</div>'}
+    ${sy?`<div class="say"><small>${sub}</small>${inline(sy.body)}</div>`:''}</div></div>`}).join('')}
+$('#en').onclick=()=>{LANG='en';$('#en').classList.add('on');$('#es').classList.remove('on');RUN&&renderNeighbors(RUN)};
+$('#es').onclick=()=>{LANG='es';$('#es').classList.add('on');$('#en').classList.remove('on');RUN&&renderNeighbors(RUN)};
 
-function renderMap(run){
-  if(!map){map=L.map('map',{scrollWheelZoom:false}).setView([41.84,-87.75],10);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:16}).addTo(map)}
-  if(layer)layer.remove();layer=L.layerGroup().addTo(map);const sc=run.all_scores||[];if(!sc.length)return;
-  const max=Math.max(...sc.map(s=>s.score)),min=Math.min(...sc.map(s=>s.score));
-  sc.forEach(s=>{const v=(s.score-min)/(max-min||1);L.circleMarker([s.latitude,s.longitude],{radius:3,stroke:false,fillOpacity:.1+.8*v*v,fillColor:'#0f766e'}).addTo(layer)});
-  const pts=[];(run.final_plan?.stops||[]).forEach(st=>{const s=sc.find(x=>x.geo_id===st.geo_id);if(!s)return;pts.push([s.latitude,s.longitude]);
-    L.marker([s.latitude,s.longitude],{icon:L.divIcon({className:'',html:`<div style="background:#d97706;color:#fff;border-radius:50%;width:30px;height:30px;display:grid;place-items:center;font-weight:800;border:3px solid #fff;box-shadow:0 1px 4px #0005">${st.saturday}</div>`})})
-     .bindPopup(`<b>Saturday ${st.saturday}</b><br>${tractName(st.geo_id)}`).addTo(layer)});
-  if(pts.length)map.fitBounds(pts,{padding:[60,60],maxZoom:12})}
-
-function splitLang(text){const out={en:[],es:[]};let cur=null;
-  text.split('\n').forEach(line=>{const h=/^#+\s/.test(line);const t=line.toLowerCase();
-    if(h&&/english/.test(t)){cur='en';return}if(h&&/(español|espanol|spanish)/.test(t)){cur='es';return}
-    if(h&&/(saturday|sábado|sabado|stop|parada)/.test(t)){out.en.push(line.replace(/sábado/i,'Saturday'));out.es.push(line);cur=null;return}
-    if(cur)out[cur].push(line);else{out.en.push(line);out.es.push(line)}});return out}
-function md(t){return esc(t).replace(/^#{1,2} (.*)$/gm,'<h3 style="margin-top:16px">$1</h3>').replace(/^#{3,} (.*)$/gm,'<h4>$1</h4>')
-  .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^---+$/gm,'').replace(/^[-*] (.*)$/gm,'• $1').replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>')}
-function renderFlyer(){if(!outreach){$('#flyer').innerHTML='No flyer yet.';return}$('#flyer').classList.remove('empty');
-  const s=splitLang(outreach);$('#flyer').innerHTML=md((s[lang].join('\n').trim())||outreach)}
-document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{lang=b.dataset.l;document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));renderFlyer()});
-
-function renderLimits(run){const l=(run.limits||[]).filter(x=>x.what&&x.what!=='—');
-  $('#limits').classList.toggle('empty',!l.length);
-  $('#limits').innerHTML=l.map(x=>`<div class="limit"><b>${esc(x.what)}</b> ${esc(x.why)}</div>`).join('')||'—'}
-
-function approachName(v){return v==='v1'?'Need-first scoring':'Distance-first scoring (original)'}
+/* ---------- details ---------- */
 function renderMemory(m){
-  $('#approach').textContent='Approach: '+approachName(m.approved_config);
-  const h=(m.config_history||[]).slice(-1)[0];const d=(m.decisions||[]).slice(-1)[0];
-  const n=new Set((m.visits||[]).map(v=>v.geo_id)).size;
-  $('#memory').innerHTML=`<p><b>Scoring approach:</b> ${approachName(m.approved_config)}${h?` — changed by ${esc(h.approver)} on ${esc(h.date)}: “${esc(h.reason)}”`:' (not yet reviewed by a person)'}</p>
-   <p><b>Neighborhoods already visited:</b> ${n}. New plans favour places the van hasn't been.</p>
-   ${d?`<p><b>Last decision on record:</b> ${esc(d.date)}, accepted with ${esc((d.accepted_flags||[]).join(', ')||'no')} flag — “${esc(d.reason)}”</p>`:''}
-   <p><b>Lessons it has learned:</b> ${(m.lessons||[]).length||'none yet'}</p>
-   ${(m.lessons||[]).slice(-3).map(l=>`<div class="muted">• ${esc(l.text)}</div>`).join('')}`}
+  const months={};(m.visits||[]).forEach(v=>(months[v.month]=months[v.month]||[]).push(v.geo_id));
+  $('#memory').innerHTML=`<div style="font-size:13.5px"><b>Approved score version:</b> <span class="chip accent">${esc(m.approved_config)}</span></div>
+   <div style="font-size:13.5px;margin-top:8px"><b>Lessons:</b> ${(m.lessons||[]).map(l=>esc(l.text)).join(' · ')||'<span class="empty">none yet</span>'}</div>
+   <div style="font-size:13.5px;margin-top:8px"><b>Visits:</b> ${Object.entries(months).map(([k,v])=>`${esc(k)}: ${v.length} stops`).join(', ')||'<span class="empty">none</span>'}</div>`}
+function renderClaims(r){const c=Object.values(r.claims||{});$('#claims').innerHTML=`<table><tr><th>Claim</th><th>Value</th><th>Scale</th><th>Caveats</th><th>Audit</th></tr>
+  ${c.map(x=>`<tr><td class="num">${esc(x.claim_id)}</td><td>${esc(typeof x.value==='object'?JSON.stringify(x.value).slice(0,60):x.value)}</td><td>${esc(x.scale)}</td><td style="color:var(--muted)">${(x.caveats||[]).map(esc).join(', ')}</td><td>${esc(x.audit)}</td></tr>`).join('')}</table>`}
 
-function renderBanner(run,mem){const hf=run.human_flags||[];if(!hf.length){$('#banner').innerHTML='';return}
-  const d=(run.rounds||[]).slice(-1)[0]?.demographics;const sw=mem.approved_config!=='v1';
-  const g=d?Object.entries(d.gap_vs_most_uninsured_pts).sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]))[0]:null;
-  const lab={black_pop:'Black',hispanic_pop:'Hispanic',white_pop:'white',asian_pop:'Asian'};
-  const plain=g?`The four neighborhoods in this plan are ${d.plan[g[0]]}% ${lab[g[0]]} residents, compared with ${d.most_uninsured_tenth[g[0]]}% in the county's most-uninsured neighborhoods. The plan may be missing some of the people who most need a free clinic.`:'';
-  const dflt=sw?'The original approach sent the van to insured suburbs. Need should come first, and distance should only count for households without a car.'
-     :'Four stops cannot reach every community at once; keep this approach and add a Spanish-language West/Southwest Side stop next month.';
-  $('#banner').innerHTML=`<div class="banner"><h3>Your review is needed before this plan goes out</h3>
-   <p>Our fairness check looked at who lives in the chosen neighborhoods (the planner itself never sees this). ${esc(plain)}</p>
-   <p class="small muted">EquiVita won't quietly re-plan around race. You decide: ${sw?'switch to need-first scoring, or ':''}accept this plan with the concern on record.</p>
-   <textarea id="reason">${esc(dflt)}</textarea>
-   <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">${sw?'<button class="primary" id="swBtn">Switch to need-first scoring</button>':''}<button id="ackBtn">Accept plan, keep concern on record</button></div></div>`;
-  const done=async m=>{$('#banner').innerHTML=`<div class="banner" style="background:var(--ok-soft);border-color:var(--ok)"><b>${esc(m)}</b></div>`;renderMemory(await api('/api/memory'))};
-  if(sw)$('#swBtn').onclick=async()=>{await api('/api/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:'v1',reason:$('#reason').value})});done('Saved. EquiVita will use need-first scoring from now on. Press “Plan next month” to re-plan.')};
-  $('#ackBtn').onclick=async()=>{await api('/api/acknowledge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:$('#reason').value})});done('Saved. The plan stands, with your note on record for the funder report.')}}
-
-async function loadRun(id){const run=await api('/api/runs/'+id);const mem=await api('/api/memory');
-  renderCards(run);renderMap(run);renderLimits(run);renderBanner(run,mem);renderMemory(mem);outreach=run.outreach||'';renderFlyer()}
-
-$('#runBtn').onclick=async()=>{$('#runBtn').disabled=true;$('#runBtn').textContent='Planning… (1–2 min)';
-  try{await api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}catch(e){$('#runBtn').disabled=false;$('#runBtn').textContent='Plan next month';alert('Could not start: '+e);return}
-  follow()};
-function follow(){$('#runBtn').disabled=true;$('#runBtn').textContent='Planning… (1–2 min)';
-  clearInterval(poll);poll=setInterval(async()=>{const l=await api('/api/live');renderProgress(l.events,l.running);
-    if(!l.running){clearInterval(poll);$('#runBtn').disabled=false;$('#runBtn').textContent='Plan next month';
-      if(l.error)alert('Something went wrong: '+l.error);if(l.run_id)loadRun(l.run_id)}},1000)}
-
-(async()=>{renderMemory(await api('/api/memory'));const ids=await api('/api/runs');if(ids[0])loadRun(ids[0]);
-  const l=await api('/api/live');if(l.running)follow()})();
+/* ---------- wiring ---------- */
+async function loadRun(id){RUN=await api('/api/runs/'+id);renderPlanner(RUN);renderPlan(RUN);renderAuditor(RUN);renderNeighbors(RUN);renderClaims(RUN);renderMemory(await api('/api/memory'))}
+async function refreshRuns(sel){const ids=await api('/api/runs');$('#runSel').innerHTML=ids.map(i=>`<option ${i===sel?'selected':''}>${i}</option>`).join('')}
+$('#runSel').onchange=e=>loadRun(e.target.value);
+$('#resetBtn').onclick=async()=>{if(confirm('Clear memory?')){renderMemory(await api('/api/reset-memory',{method:'POST'}))}};
+$('#runBtn').onclick=async()=>{$('#runBtn').disabled=true;$('#status').textContent='Starting…';
+  try{await post('/api/run')}catch(e){$('#status').textContent='Could not start: '+e;$('#runBtn').disabled=false;return}
+  clearInterval(poll);poll=setInterval(async()=>{const l=await api('/api/live'),last=l.events[l.events.length-1];
+    $('#status').textContent=l.running?`Running · ${last?last.author.replace(/_/g,' '):'starting'}…`:(l.error?'Error: '+l.error:'Done.');
+    if(!l.running){clearInterval(poll);$('#runBtn').disabled=false;if(l.run_id){await refreshRuns(l.run_id);loadRun(l.run_id)}}},1500)};
+(async()=>{const ids=await api('/api/runs');await refreshRuns(ids[0]);if(ids[0])loadRun(ids[0])})();
 </script>
 </body>
 </html>

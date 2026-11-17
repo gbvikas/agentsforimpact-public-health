@@ -101,7 +101,12 @@ def score_need(rows: list[dict], version: str, top_n: int = 25) -> dict:
             total_pop=int(r.total_pop), latitude=float(r.latitude), longitude=float(r.longitude),
             pct_uninsured=float(r.pct_uninsured), pct_no_vehicle=float(r.pct_no_vehicle),
             pct_limited_english=float(r.pct_limited_english),
+            pct_diabetes=float(r.pct_diabetes), pct_high_bp=float(r.pct_high_bp), pct_copd=float(r.pct_copd),
             km_to_safety_net=float(r.km_to_safety_net),
+            # Percent ranks (0-1, within county) that feed the formula, so the UI can show why a tract scored high.
+            components=dict(uninsured=round(float(r.pr_unins), 3), chronic=round(float(r.pr_chronic), 3),
+                            no_vehicle=round(float(r.pr_noveh), 3), limited_english=round(float(r.pr_lep), 3),
+                            carless_km=round(float(r.pr_carless_km), 3), shortage=round(float(r.shortage), 3)),
             hpsa_score=None if pd.isna(r.hpsa_score) else int(r.hpsa_score),
             claim_ids={**ids, "score": sid}))
 

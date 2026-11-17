@@ -171,11 +171,14 @@ async def audit_gate(state):
         "verdict": "pass" if passed else "revise", "flags": flags,
         "auditor_summary": verdict.get("summary", ""), "demographics": checks.get("demographics")}]
     done = passed or rnd >= MAX_ROUNDS
+    # One verdict for the UI. "passed" only means no revise flags are left; a human flag is still open.
+    status = "revise" if revise else ("needs_human" if human else "cleared")
+    rounds[-1]["status"] = status
     msg = (f"Audit gate, round {rnd}: {'PASS' if passed else 'REVISE'} "
            f"({len(revise)} revise flag(s), {len(human)} for the human). "
            + ("Loop ends." if done else "Sending revise request back to the Planner (no demographic detail)."))
     return ({"round": rnd, "rounds": rounds, "claims": claims, "revise_request": revise_request,
-             "human_flags": human, "audit_passed": passed}, msg, done)
+             "human_flags": human, "audit_passed": passed, "audit_status": status}, msg, done)
 
 
 async def finalize_plan(state):
@@ -263,7 +266,8 @@ async def limits_and_persist(state):
 
     os.makedirs(RUNS_DIR, exist_ok=True)
     keys = ["score_config_version", "score_meta", "candidates", "rounds", "final_plan", "human_flags",
-            "audit_passed", "outreach", "past_lessons", "recent_visits", "ev_context", "stop_details"]
+            "audit_passed", "audit_status", "outreach", "past_lessons", "recent_visits", "ev_context",
+            "stop_details"]
     record = {k: state.get(k) for k in keys}
     record.update(run_id=run_id, limits=limits, claims=claims,
                   all_scores=state.get("all_scores", []), memory_after=mem)
@@ -352,7 +356,10 @@ async def check_plan(tool_context: ToolContext) -> dict:
                   "white_pop": ref.get("pct_white_non_hispanic"), "asian_pop": ref.get("pct_asian")}
         gaps = {k: round(plan_sh[k] - (ref_sh[k] or 0), 1) for k in plan_sh}
         demo = {"plan": plan_sh, "most_uninsured_tenth": ref_sh, "county": base.get("county"),
-                "gap_vs_most_uninsured_pts": gaps, "threshold_pts": DISPARITY_THRESHOLD_PTS}
+                "gap_vs_most_uninsured_pts": gaps, "threshold_pts": DISPARITY_THRESHOLD_PTS,
+                # per-stop breakdown, so one stop cannot hide behind the combined share
+                "per_stop": [{"geo_id": r["geo_id"], "total_pop": r["total_pop"],
+                              **{k: r.get(k) for k in r if k.startswith("pct_")}} for r in plan_rows]}
         worst = max(gaps, key=lambda k: abs(gaps[k]))
         if abs(gaps[worst]) > DISPARITY_THRESHOLD_PTS:
             flags.append({"code": "DEMOGRAPHIC_DISPARITY", "route": "human",
