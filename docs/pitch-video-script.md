@@ -1,117 +1,99 @@
-# EquiVita: pitch video script (~3 minutes)
+# EquiVita: pitch video script + deck outline (~2 minutes)
 
-Track: **Siting**, with the Accountability and Explanation agents behind it.
-Live app: https://equivita-375283687966.us-central1.run.app
+The **pitch** video is deck-led: why this matters, what we found, why it's built this way, what it changes.
+The **demo** video (`docs/demo-video-script.md`) shows the product working. Don't repeat the full
+walkthrough here; use at most two short app clips.
 
-**If the time limit is shorter than 3 minutes, read only the bold lines.**
-
-## Before you press record
-
-1. Open `/console` → **Reset memory**. Then on the home page press **Plan next month** once and let it finish
-   (1–2 min). This creates the starting state: distance-first scoring, review banner showing.
-2. Have a second tab on `/field`. Test the microphone once (any browser works).
-3. Have `docs/clinic-plan-console-guide.pdf` page "Planner ⇄ Auditor" open as a backup screenshot of a
-   rejected round (live runs don't always produce one).
-4. Planning takes 1–2 minutes: **cut or speed up the waits** in the edit.
+Track: **Siting**, with Accountability and Explanation agents behind it. One slide per section below.
+Front-load: assume you get cut off before the last slide.
 
 ---
 
-## 0:00 – 0:20 · The problem
+## Slide 1 · Title (0:00–0:10)
 
-**Screen:** EquiVita home page, top of the page.
+**On slide:** EquiVita · "Where the mobile clinic parks next month, and why" · team names · Cook County, IL.
 
-> **"A county has one mobile clinic van, a nurse practitioner, and four Saturdays a month. Where it parks
-> is a public-health decision. EquiVita helps the outreach lead at Cook County decide where the van goes,
-> and the thing it knows that a spreadsheet doesn't is which numbers it can trust at which scale, and
-> who its plan actually reaches."**
+> "EquiVita helps a county outreach lead decide where one mobile clinic van goes on four Saturdays, and
+> explain that choice to the neighborhoods it chose and the ones it didn't."
 
-## 0:20 – 0:50 · The obvious answer fails
+## Slide 2 · The problem (0:10–0:25)
 
-**Screen:** the review banner and the first plan (suburban stops). Point at the map.
+**On slide:** one van, one nurse practitioner, four Saturdays, 1,328 census tracts. "Last month it went where a councilman asked."
 
-> **"We started with the intuitive formula: most need, farthest from care. It sent the van to the suburbs.**
-> In Cook County, distance to a free clinic runs *opposite* to need: it correlates minus 0.65 with
-> households that have no car. The farthest tracts are insured, car-owning suburbs."
+> "Park in the wrong place and you've run an expensive health fair for people who already have a doctor.
+> The outreach lead has no epidemiologist, just a spreadsheet and a hunch."
 
-> **"Our auditor caught it. The four stops were 81 percent white; the county's most-uninsured
-> neighborhoods are 82 percent Hispanic. But the planner never saw race. That's the rule here:
-> race is banned as an input and required as an audit. And that rule forced our architecture."**
+## Slide 3 · The number that surprised us (0:25–0:45)
 
-## 0:50 – 1:20 · A human decides, and the system remembers
+**On slide:** big number **−0.65**. Two small maps: "distance-first plan" (suburbs) vs "need-first plan".
+Caption: *In Cook County, distance to a free clinic runs opposite to need.*
 
-**Screen:** click **Switch to need-first scoring** → **Plan next month** → the progress steps run (cut the wait).
+> "The intuitive formula, most need and farthest from care, sent the van to insured suburbs. Distance
+> to a free clinic correlates minus 0.65 with households that have no car. Its top 30 tracts were less
+> uninsured than the county median, and none was a federal shortage area."
 
-> "The auditor isn't allowed to steer the planner by race, so it routes the finding to a person.
-> The outreach lead switches to need-first scoring. That decision, and the reason, are written to
-> memory, an append-only log in BigQuery, so next month starts from what we learned."
+## Slide 4 · The rule that shaped the architecture (0:45–1:10)
 
-## 1:20 – 1:50 · The plan she can put on a calendar
+**On slide:** diagram: Planner (blind) → Auditor (sees race) → Human → Explainer; Field Reporter feeding memory.
+Callout: *Race is banned as an input and required as an audit.*
 
-**Screen:** the four Saturday cards, then the map, then the flyer EN/ES toggle.
+> "Race can't be an input, but it must be an audit. So the auditor has to see data the planner can't,
+> in a separate context, or it just defends the plan. That rule forced four agents: a blind planner, an
+> auditor with census data, an explainer that writes for neighbors, and a field reporter. Their
+> instructions conflict on purpose: the auditor hedges and cites; the explainer is warm and never hedges.
+> And when the audit finds a disparity, it goes to a person, not back to the planner."
 
-> **"Four Saturdays, four neighborhoods, each with the reason in plain numbers: about one in four adults
-> uninsured, one in three homes without a car.** Where to send people after the visit, and why this
-> neighborhood and not the one next door. And a flyer and a door script in English and Spanish, written
-> for a neighbor, not a professional."
+## Slide 5 · What changed because of the audit (1:10–1:25)
 
-## 1:50 – 2:25 · How we decided (the architecture)
+**On slide:** before/after table.
 
-**Screen:** "How we decided" / `/console`: live trace, then the Planner ⇄ Auditor rounds
-(or the PDF backup showing round 1 rejected).
-
-> **"This is four agents, not one with four prompts.** The planner works blind to demographics: its MCP
-> Toolbox toolset has no demographic tool, so it can't even ask. The auditor runs in a separate context
-> with census race data and checks scale, ties and spacing. Watch the state: the planner writes
-> `draft_plan`, the auditor reads it and writes `audit_verdict`, and a code gate sends back only flag
-> codes, never demographic detail."
-
-> **"Here the system rejected its own first answer: two stops 3.9 kilometers apart. The planner revised.**
-> The auditor's prompt says hedge, cite, refuse. The explainer's says warm, plain, no hedging. One
-> agent can't hold both."
-
-## 2:25 – 2:50 · The van talks back
-
-**Screen:** `/field`. Pick Saturday 1, press **Speak**, say the debrief below, **Stop**, **Save report**.
-Then **Plan next month** (cut the wait) and show the trade-offs line citing `fr-…`.
-
-Say into the mic:
-> "We parked at the church lot. Only nine people came. Most walked from the apartments across the
-> expressway; the underpass felt unsafe. Mrs. Alvarez said her sugar is high. Four people asked about
-> Medicaid. There's a free clinic at St. Columba a few blocks east."
-
-Then narrate:
-> **"After each Saturday the nurse just talks. A fourth agent keeps the place-level facts and removes
-> anything about a person: Mrs. Alvarez is gone.** Next month the planner skips that tract and cites
-> the report: a free clinic our federal data couldn't see, and a barrier straight-line distance can't
-> measure. Ground truth closes our two biggest data gaps."
-
-## 2:50 – 3:10 · Honest limits and the stack
-
-**Screen:** "Good to know" / limits list, then the claims ledger.
-
-> **"Every number carries its scale. Air quality is a 12-kilometer grid: it varies 6 percent across the
-> county, so we never rank on it. Disease trends are a four-county region. Prevalence is modeled, not
-> counted. Distances are straight-line to federal sites only, so they're upper bounds.** We even caught
-> Gemini inventing a patient note from silence, so voice is gated on real sound before any model hears it."
-
-> **"Google ADK, Gemini, MCP Toolbox over BigQuery, memory in BigQuery, deployed on Cloud Run.
-> EquiVita plans places, not people, and tells you what it can't see."**
-
----
-
-## The four judge questions, and where the video answers them
-
-| Question | Where | The answer in one line |
+| | Distance-first | Need-first (human-approved) |
 |---|---|---|
-| Delete any one agent: does it get worse? | 0:20–0:50, 2:25–2:50 | No auditor: the suburban plan ships unchallenged. No field reporter: the van returns to a tract with an unlisted free clinic. No explainer: no flyer. |
-| A `session.state` key written by one agent, read by another | 1:50–2:25 | Planner writes `draft_plan` → Auditor reads it, writes `audit_verdict` → audit gate reads it, writes `revise_request` → Planner reads it. |
-| Two agents whose instructions conflict | 1:50–2:25 | Auditor: hedge, cite, refuse. Explainer: warm, plain, no hedging. |
-| Where the system rejected its own first answer | 2:00 (and 0:20 across runs) | Round 1 rejected for stops 3.9 km apart; and the human-approved switch from distance-first to need-first. |
+| Median uninsured, top 30 tracts | 8.6% | 24.5% |
+| In a federal shortage area | 0 of 30 | 29 of 30 |
+| Four stops (audit) | 81% white | majority Black and Hispanic |
 
-## Numbers used (all from our own runs on Cook County, 1,328 tracts)
+> "The auditor flagged the first plan, a human switched the weights, and the system remembered why.
+> One finding stays open honestly: the most-uninsured neighborhoods are 82 percent Hispanic, and four
+> stops can't mirror that. We report it rather than hide it."
 
-- Distance to a safety-net clinic vs. no-vehicle households: Spearman **−0.65**.
-- Distance-first plan: stops **81% white**; most-uninsured tenth of tracts **82% Hispanic**; top-30 median uninsured **8.6%** (county median 10.4%), **0 of 30** in a federal shortage area.
-- Need-first (v1) top-30 median uninsured **24.5%**.
-- PM2.5 spread across tracts **1.06×** (p90/p10) vs. no-vehicle **16×**, uninsured **4.75×**.
-- Honest open finding: even need-first stops are majority Black while the most-uninsured tenth is majority Hispanic; four stops can't mirror the county, so the flag stays open for a person to decide.
+## Slide 6 · The loop no spreadsheet has (1:25–1:40)
+
+**On slide:** circle: data → plan → audit → human → van goes out → **nurse reports back** → next plan.
+Short clip (5–8 s): `/field` saving a voice debrief, "🔒 personal details removed".
+
+> "After each Saturday the nurse just talks. A field reporter keeps place-level facts and drops anything
+> about a person. Next month the planner skips a tract because of a free clinic our federal data couldn't
+> see. Ground truth closes our biggest data gaps."
+
+## Slide 7 · What we can't tell you (1:40–1:52)
+
+**On slide:** four lines with scale tags.
+- Air quality: 12 km grid, varies 6% across the county → never used to rank. *(county)*
+- Disease trends: a four-county region. *(region)*
+- Prevalence is modeled; vehicles and language are survey estimates. *(tract)*
+- Distances are straight-line to federal sites only → upper bounds. *(facility point)*
+
+> "Every number carries its scale, and the limits list ships with every plan. We even caught Gemini
+> inventing a patient note from silence, so voice is gated on real sound first."
+
+## Slide 8 · Built on Google Cloud, and what's next (1:52–2:05)
+
+**On slide:** ADK multi-agent · Gemini 3.6 Flash · MCP Toolbox (BigQuery, per-agent toolsets) · our own
+tools (`score_need`, `check_plan`, `stop_distances`) · memory as an append-only BigQuery log · Cloud Run.
+Next: Outreach Kit (data-chosen channels: posters where homes lack internet, Spanish radio where English
+is limited), travel-time data, a low-latency memory store (Cloud SQL).
+
+> "EquiVita plans places, not people, and tells you what it can't see."
+
+---
+
+## Deck checklist (judges score the deck and videos only, with no Q&A)
+
+- [ ] Say the track (Siting) on slide 1 or 2.
+- [ ] The four judge questions are answered somewhere in the deck: put a small "Judge questions" appendix
+      slide with the table from `docs/demo-video-script.md`.
+- [ ] Measured vs. modeled is stated (slide 7).
+- [ ] The equity audit numbers are shown, including the open finding (slide 5).
+- [ ] One honest limitation line on every data slide.
+- [ ] Links: live app, GitHub repo, Google Skills project.
