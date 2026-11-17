@@ -275,3 +275,13 @@ tools:
   - demographics_for_tracts
   - demographics_baseline
   - data_trap_checks
+---
+# What the Planner LLM may call while drafting (tract_features is for the score_need code step).
+kind: toolset
+name: planner_drilldown
+tools:
+  - tract_detail
+  - nearest_safety_net_sites
+  - tract_neighbors
+  - county_air_context
+  - regional_respiratory_trend

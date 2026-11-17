@@ -23,3 +23,5 @@ Thumbs.db
 *.parquet
 *.csv.gz
 toolbox/bin/
+agent/runs/*.json
+agent/memory_store.json
