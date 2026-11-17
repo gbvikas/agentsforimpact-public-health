@@ -1,4 +1,4 @@
-"""Clinic plan dashboard: run the agent live and show its reasoning, audit and memory.
+"""EquiVita dashboard: run the agent live and show its reasoning, audit and memory.
 
 Run (from repo root, with Toolbox running):
     .venv/bin/python -m uvicorn dashboard.app:app --port 8090
@@ -24,7 +24,7 @@ from clinic_plan import memory  # noqa: E402
 from clinic_plan.agent import root_agent  # noqa: E402
 from clinic_plan.steps import RUNS_DIR  # noqa: E402
 
-app = FastAPI(title="Clinic plan dashboard")
+app = FastAPI(title="EquiVita")
 LIVE = {"running": False, "events": [], "run_id": None, "error": None}
 
 

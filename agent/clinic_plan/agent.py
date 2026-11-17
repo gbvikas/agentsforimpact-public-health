@@ -130,7 +130,7 @@ explainer = LlmAgent(
 
 root_agent = SequentialAgent(
     name="clinic_plan",
-    description="Plans four Saturday mobile clinic stops for a county and explains them.",
+    description="EquiVita: plans four Saturday mobile clinic stops for a county and explains them.",
     sub_agents=[
         steps.step("recall_memory", "Loads approved score config, past lessons and visits.", steps.recall_memory),
         ParallelAgent(name="lookups", description="Independent evidence lookups via MCP Toolbox.", sub_agents=[
