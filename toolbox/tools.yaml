@@ -1,0 +1,277 @@
+# MCP Toolbox for Databases config for clinic_plan.
+# Run:  A4I_PROJECT=<gcp-project> toolbox/bin/toolbox --config toolbox/tools.yaml
+#
+# Toolsets enforce who can see what (blueprint principle 2):
+#   planner  - tract-scale need/access + county/regional context. NO demographic tools.
+#   auditor  - everything the planner has, plus race/ethnicity (ACS) and data-trap checks.
+# Every row a tool returns carries a `scale` column so claims keep their resolution.
+
+kind: source
+name: a4i-bq
+type: bigquery
+project: ${A4I_PROJECT}
+location: US
+# No readOnly flag: Toolbox 1.17 suppresses every bigquery-sql tool on a read-only source.
+# Safety comes from the statements themselves: fixed SELECTs the agents cannot rewrite.
+maxQueryResultRows: 2000
+---
+# ---------------------------------------------------------------- planner (Context A)
+kind: tool
+name: tract_features
+type: bigquery-sql
+source: a4i-bq
+description: |
+  Every census tract in the county with the inputs score_need uses: uninsured (adults 18-64,
+  CDC PLACES, modeled), diabetes / high blood pressure / COPD (PLACES, modeled), no-vehicle and
+  limited-English households (CDC SVI / ACS survey), straight-line km to the nearest care site
+  and nearest safety-net site (federal sites only, an upper bound), and the tract's highest live
+  HRSA shortage-area score (NULL = not designated). Scale: tract. Contains no demographic data.
+parameters:
+  - name: min_pop
+    type: integer
+    description: Skip tracts with fewer residents than this (parks, airports). Use 500.
+statement: |
+  WITH hpsa AS (
+    SELECT GEO_ID AS geo_id, MAX(HPSA_SCORE) AS hpsa_score, COUNT(*) AS hpsa_designations
+    FROM `${A4I_PROJECT}.a4i_health.shortage_areas`
+    WHERE HPSA_STATUS_DESC = 'Designated'
+    GROUP BY 1)
+  SELECT 'tract' AS scale, b.geo_id, b.total_pop, b.latitude, b.longitude,
+         b.pct_uninsured, b.pct_diabetes, b.pct_high_bp, b.pct_copd,
+         b.pct_no_vehicle, b.pct_limited_english, b.pct_age_65_plus,
+         a.km_to_any_care, a.km_to_safety_net, a.extra_km_if_uninsured,
+         h.hpsa_score, h.hpsa_designations
+  FROM `${A4I_PROJECT}.a4i_health.burden_tracts` b
+  JOIN `${A4I_PROJECT}.a4i_health.tract_access` a USING (geo_id)
+  LEFT JOIN hpsa h USING (geo_id)
+  WHERE b.total_pop >= @min_pop
+---
+kind: tool
+name: tract_detail
+type: bigquery-sql
+source: a4i-bq
+description: |
+  Full need and access profile for specific census tracts: insurance (both PLACES 18-64 and SVI
+  all-ages, which measure different populations), chronic disease, checkup rate, disability,
+  transport, age, language, internet, and distances. Scale: tract. PLACES values are modeled
+  estimates, not counts. Contains no race or ethnicity.
+parameters:
+  - name: geo_ids
+    type: array
+    description: 11-digit census tract IDs (strings, keep the leading zeros).
+    items:
+      name: geo_id
+      type: string
+      description: 11-digit census tract ID.
+statement: |
+  SELECT 'tract' AS scale, b.geo_id, b.total_pop, b.pct_uninsured, b.pct_uninsured_all_ages,
+         b.pct_checkup, b.pct_diabetes, b.pct_high_bp, b.pct_copd, b.pct_asthma,
+         b.pct_mobility_difficulty, b.pct_lack_transport, b.pct_no_vehicle, b.pct_age_65_plus,
+         b.pct_limited_english, b.pct_no_internet,
+         a.km_to_any_care, a.km_to_safety_net, a.extra_km_if_uninsured
+  FROM `${A4I_PROJECT}.a4i_health.burden_tracts` b
+  JOIN `${A4I_PROJECT}.a4i_health.tract_access` a USING (geo_id)
+  WHERE b.geo_id IN UNNEST(@geo_ids)
+---
+kind: tool
+name: nearest_safety_net_sites
+type: bigquery-sql
+source: a4i-bq
+description: |
+  The nearest federally recognized safety-net clinics (FQHC or HRSA health center site, which see
+  uninsured patients on a sliding scale) to a tract's center, with weekly opening hours where
+  published. FQHC records within 50 m of a health-center record are treated as the same clinic.
+  Distances are straight-line km, not travel time, and county clinics / free clinics are not in
+  the federal data. Scale: facility point.
+parameters:
+  - name: geo_id
+    type: string
+    description: 11-digit census tract ID.
+  - name: n
+    type: integer
+    description: How many sites to return, e.g. 3.
+statement: |
+  WITH t AS (
+    SELECT ST_GEOGPOINT(longitude, latitude) AS pt
+    FROM `${A4I_PROJECT}.a4i_health.burden_tracts` WHERE geo_id = @geo_id),
+  s AS (
+    SELECT FACILITY_NM, CMS_PROVIDER_ADDRESS, CMS_PROVIDER_CITY, site_kind,
+           TOT_OPER_HR_PER_WEEK, ST_GEOGPOINT(longitude, latitude) AS pt
+    FROM `${A4I_PROJECT}.a4i_health.care_sites`
+    WHERE site_kind IN ('FQHC', 'Health Center site')),
+  d AS (
+    SELECT * FROM s AS x
+    WHERE NOT (x.site_kind = 'FQHC' AND EXISTS (
+      SELECT 1 FROM s AS h
+      WHERE h.site_kind = 'Health Center site' AND ST_DWITHIN(x.pt, h.pt, 50))))
+  SELECT 'facility_point' AS scale, d.FACILITY_NM AS name, d.CMS_PROVIDER_ADDRESS AS address,
+         d.CMS_PROVIDER_CITY AS city, d.site_kind, d.TOT_OPER_HR_PER_WEEK AS hours_per_week,
+         ROUND(ST_DISTANCE(d.pt, t.pt) / 1000, 2) AS km_straight_line
+  FROM d CROSS JOIN t
+  ORDER BY km_straight_line
+  LIMIT @n
+---
+kind: tool
+name: tract_neighbors
+type: bigquery-sql
+source: a4i-bq
+description: |
+  The n census tracts whose centers are closest to a given tract, with their need and access
+  inputs. Use it to answer "why here and not next door". Scale: tract.
+parameters:
+  - name: geo_id
+    type: string
+    description: 11-digit census tract ID.
+  - name: n
+    type: integer
+    description: How many neighboring tracts to return, e.g. 5.
+statement: |
+  WITH t AS (
+    SELECT ST_GEOGPOINT(longitude, latitude) AS pt
+    FROM `${A4I_PROJECT}.a4i_health.burden_tracts` WHERE geo_id = @geo_id)
+  SELECT 'tract' AS scale, b.geo_id,
+         ROUND(ST_DISTANCE(ST_GEOGPOINT(b.longitude, b.latitude), t.pt) / 1000, 2) AS km_from_tract,
+         b.total_pop, b.pct_uninsured, b.pct_diabetes, b.pct_no_vehicle, b.pct_limited_english,
+         a.km_to_safety_net
+  FROM `${A4I_PROJECT}.a4i_health.burden_tracts` b
+  JOIN `${A4I_PROJECT}.a4i_health.tract_access` a USING (geo_id)
+  CROSS JOIN t
+  WHERE b.geo_id != @geo_id
+  ORDER BY km_from_tract
+  LIMIT @n
+---
+kind: tool
+name: county_air_context
+type: bigquery-sql
+source: a4i-bq
+description: |
+  County-level air quality: mean PM2.5, worst single day, and average count of bad-air days.
+  Also returns the p90/p10 spread across tracts, which is near 1.0 because EPA models PM2.5 on a
+  12 km grid. Never use this to rank or compare neighborhoods. Scale: county.
+statement: |
+  SELECT 'county' AS scale,
+         ROUND(AVG(mean_pm), 2) AS county_mean_pm25,
+         ROUND(MAX(max_pm), 1) AS worst_day_pm25,
+         ROUND(AVG(days_over_35), 1) AS avg_days_over_35,
+         ROUND(APPROX_QUANTILES(mean_pm, 10)[OFFSET(9)] / APPROX_QUANTILES(mean_pm, 10)[OFFSET(1)], 3)
+           AS tract_spread_p90_over_p10
+  FROM `${A4I_PROJECT}.a4i_health.exposure_tracts`
+---
+kind: tool
+name: regional_respiratory_trend
+type: bigquery-sql
+source: a4i-bq
+description: |
+  Recent weekly emergency-department visit shares for COVID, influenza and RSV. These values are
+  computed for a multi-county Health Service Area (named in hsa_counties) and copied onto the
+  county key: they describe the region, never a neighborhood. NULL values mean CDC reported no
+  data. Scale: health_service_area.
+parameters:
+  - name: weeks
+    type: integer
+    description: Number of most recent weeks to return, e.g. 8.
+statement: |
+  SELECT 'health_service_area' AS scale, DATE(week_end) AS week_end, hsa, hsa_counties,
+         percent_visits_covid, percent_visits_influenza, percent_visits_rsv,
+         ed_trends_covid, ed_trends_influenza, ed_trends_rsv
+  FROM `${A4I_PROJECT}.a4i_health.disease_weekly`
+  ORDER BY week_end DESC
+  LIMIT @weeks
+---
+# ---------------------------------------------------------------- auditor only (Context B)
+kind: tool
+name: demographics_for_tracts
+type: bigquery-sql
+source: a4i-bq
+description: |
+  AUDIT ONLY. Race and ethnicity population counts (ACS 2020 5-year) for specific tracts and their
+  combined shares. Used to check who a plan lands on. Never an input to ranking. Scale: tract.
+parameters:
+  - name: geo_ids
+    type: array
+    description: 11-digit census tract IDs.
+    items:
+      name: geo_id
+      type: string
+      description: 11-digit census tract ID.
+statement: |
+  SELECT 'tract' AS scale, geo_id, total_pop, black_pop, hispanic_pop, white_pop, asian_pop,
+         ROUND(100 * SAFE_DIVIDE(black_pop, total_pop), 1) AS pct_black,
+         ROUND(100 * SAFE_DIVIDE(hispanic_pop, total_pop), 1) AS pct_hispanic,
+         ROUND(100 * SAFE_DIVIDE(white_pop, total_pop), 1) AS pct_white_non_hispanic,
+         ROUND(100 * SAFE_DIVIDE(asian_pop, total_pop), 1) AS pct_asian
+  FROM `bigquery-public-data.census_bureau_acs.censustract_2020_5yr`
+  WHERE geo_id IN UNNEST(@geo_ids)
+---
+kind: tool
+name: demographics_baseline
+type: bigquery-sql
+source: a4i-bq
+description: |
+  AUDIT ONLY. Race and ethnicity shares for (a) the whole county and (b) the most-uninsured tenth
+  of tracts, as baselines to compare a plan's selected tracts against. Scale: county.
+parameters:
+  - name: county_fips
+    type: string
+    description: 5-digit county FIPS with leading zero, e.g. 17031.
+statement: |
+  WITH acs AS (
+    SELECT geo_id, total_pop, black_pop, hispanic_pop, white_pop, asian_pop
+    FROM `bigquery-public-data.census_bureau_acs.censustract_2020_5yr`
+    WHERE STARTS_WITH(geo_id, @county_fips)),
+  top_unins AS (
+    SELECT geo_id FROM `${A4I_PROJECT}.a4i_health.burden_tracts`
+    QUALIFY PERCENT_RANK() OVER (ORDER BY pct_uninsured) >= 0.9),
+  grp AS (
+    SELECT 'county' AS baseline, * FROM acs
+    UNION ALL
+    SELECT 'most_uninsured_tenth', acs.* FROM acs JOIN top_unins USING (geo_id))
+  SELECT 'county' AS scale, baseline, COUNT(*) AS tracts,
+         ROUND(100 * SUM(black_pop) / SUM(total_pop), 1) AS pct_black,
+         ROUND(100 * SUM(hispanic_pop) / SUM(total_pop), 1) AS pct_hispanic,
+         ROUND(100 * SUM(white_pop) / SUM(total_pop), 1) AS pct_white_non_hispanic,
+         ROUND(100 * SUM(asian_pop) / SUM(total_pop), 1) AS pct_asian
+  FROM grp GROUP BY baseline
+---
+kind: tool
+name: data_trap_checks
+type: bigquery-sql
+source: a4i-bq
+description: |
+  AUDIT ONLY. Counts of known data traps: shortage designations not in 'Designated' status,
+  NULL or -999 tract measures, all-NULL weekly respiratory columns, and the PM2.5 tract spread.
+  A non-zero count is a flag to report, not necessarily an error.
+statement: |
+  SELECT
+    (SELECT COUNTIF(HPSA_STATUS_DESC != 'Designated') FROM `${A4I_PROJECT}.a4i_health.shortage_areas`)
+      AS shortage_not_designated,
+    (SELECT COUNT(*) FROM `${A4I_PROJECT}.a4i_health.shortage_areas`) AS shortage_rows,
+    (SELECT COUNTIF(pct_uninsured IS NULL OR pct_no_vehicle IS NULL OR pct_lack_transport IS NULL)
+       FROM `${A4I_PROJECT}.a4i_health.burden_tracts`) AS tracts_with_null_measures,
+    (SELECT COUNTIF(pct_no_vehicle = -999 OR pct_uninsured_all_ages = -999)
+       FROM `${A4I_PROJECT}.a4i_health.burden_tracts`) AS tracts_with_sentinel,
+    (SELECT COUNT(*) FROM `${A4I_PROJECT}.a4i_health.disease_weekly`) AS disease_weeks,
+    (SELECT COUNTIF(percent_visits_covid IS NOT NULL) FROM `${A4I_PROJECT}.a4i_health.disease_weekly`)
+      AS disease_weeks_with_data,
+    (SELECT ROUND(APPROX_QUANTILES(mean_pm, 10)[OFFSET(9)] / APPROX_QUANTILES(mean_pm, 10)[OFFSET(1)], 3)
+       FROM `${A4I_PROJECT}.a4i_health.exposure_tracts`) AS pm25_tract_spread
+---
+kind: toolset
+name: planner
+tools:
+  - tract_features
+  - tract_detail
+  - nearest_safety_net_sites
+  - tract_neighbors
+  - county_air_context
+  - regional_respiratory_trend
+---
+kind: toolset
+name: auditor
+tools:
+  - tract_detail
+  - county_air_context
+  - regional_respiratory_trend
+  - demographics_for_tracts
+  - demographics_baseline
+  - data_trap_checks
