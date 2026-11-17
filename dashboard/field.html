@@ -57,14 +57,38 @@ function tractName(g){const t=g.slice(5);return`Census tract ${parseInt(t.slice(
 
 $('#sample').onclick=()=>{$('#text').value="We parked at the church lot on the main road. Only 9 people came, way fewer than we hoped. Most of them walked over from the apartments on the other side of the expressway and said the underpass felt unsafe. Mrs. Alvarez, 67 years old, told me her sugar has been high. Four people asked if we take Medicaid. Someone mentioned a free clinic at St. Columba church a few blocks east that I didn't know about. Next time we should park on the apartment side of the expressway."};
 
-// Voice: browser speech recognition (Chrome / Edge / Safari). Falls back to typing.
-const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec=null,listening=false;
-if(!SR){$('#mic').disabled=true;$('#mic').textContent='🎙️ Voice not supported here';}
-$('#mic').onclick=()=>{if(!SR)return;if(listening){rec.stop();return}
-  rec=new SR();rec.lang='en-US';rec.continuous=true;rec.interimResults=true;const base=$('#text').value;
-  rec.onresult=e=>{let t='';for(const r of e.results)t+=r[0].transcript;$('#text').value=(base?base+' ':'')+t};
-  rec.onend=()=>{listening=false;$('#mic').classList.remove('on');$('#mic').textContent='🎙️ Speak'};
-  rec.start();listening=true;$('#mic').classList.add('on');$('#mic').textContent='⏹ Stop'};
+// Voice: record 16 kHz mono WAV in the page and let Gemini transcribe it on the server.
+// Works in any browser with a microphone (Chrome, Safari, Firefox, Dia, Arc...), not only Chrome.
+let rec=null;
+async function startRec(){
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error('This browser cannot use the microphone here.');
+  const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:true,noiseSuppression:true}});
+  const ctx=new (window.AudioContext||window.webkitAudioContext)();const src=ctx.createMediaStreamSource(stream);
+  const proc=ctx.createScriptProcessor(4096,1,1);const chunks=[];
+  proc.onaudioprocess=e=>chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+  src.connect(proc);proc.connect(ctx.destination);
+  rec={stream,ctx,src,proc,chunks,rate:ctx.sampleRate,t0:Date.now()}}
+function toWav(chunks,rate){
+  const n=chunks.reduce((a,c)=>a+c.length,0),all=new Float32Array(n);let o=0;for(const c of chunks){all.set(c,o);o+=c.length}
+  const target=16000,ratio=rate/target,len=Math.floor(n/ratio),pcm=new Int16Array(len);
+  for(let i=0;i<len;i++){const v=Math.max(-1,Math.min(1,all[Math.floor(i*ratio)]));pcm[i]=v<0?v*0x8000:v*0x7fff}
+  const buf=new ArrayBuffer(44+pcm.length*2),dv=new DataView(buf);const w=(p,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(p+i,s.charCodeAt(i))};
+  w(0,'RIFF');dv.setUint32(4,36+pcm.length*2,true);w(8,'WAVE');w(12,'fmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);
+  dv.setUint32(24,target,true);dv.setUint32(28,target*2,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);w(36,'data');dv.setUint32(40,pcm.length*2,true);
+  new Int16Array(buf,44).set(pcm);return new Blob([buf],{type:'audio/wav'})}
+async function stopRec(){
+  const r=rec;rec=null;r.proc.disconnect();r.src.disconnect();r.stream.getTracks().forEach(t=>t.stop());await r.ctx.close();
+  $('#mic').classList.remove('on');$('#mic').textContent='🎙️ Speak';$('#mic').disabled=true;$('#status').textContent='Transcribing with Gemini…';
+  try{const res=await fetch('/api/transcribe',{method:'POST',headers:{'Content-Type':'audio/wav'},body:toWav(r.chunks,r.rate)});
+    if(!res.ok)throw new Error(await res.text());const j=await res.json();
+    if(j.text){$('#text').value=($('#text').value.trim()?$('#text').value.trim()+' ':'')+j.text;$('#status').textContent='Transcribed. Edit if needed, then Save report.'}
+    else $('#status').textContent=j.note||'No speech heard.'}
+  catch(e){$('#status').textContent='Transcription failed: '+e.message}
+  finally{$('#mic').disabled=false}}
+$('#mic').onclick=async()=>{
+  if(rec){await stopRec();return}
+  try{await startRec();$('#mic').classList.add('on');$('#mic').textContent='⏹ Stop and transcribe';$('#status').textContent='Listening… speak now.'}
+  catch(e){$('#status').textContent=(e.name==='NotAllowedError'?'Microphone blocked. Allow microphone access for this site in your browser settings, then try again.':'Microphone unavailable: '+e.message)}};
 
 $('#send').onclick=async()=>{const opt=$('#stop').selectedOptions[0];if(!opt?.value){$('#status').textContent='Pick a stop first.';return}
   $('#send').disabled=true;$('#status').textContent='The Field Reporter is listening…';
