@@ -47,7 +47,9 @@ Rules:
   context claims (air, respiratory trend) describe the county or a region and can never justify
   choosing one tract over another.
 - Do not call a tract "higher need" than an unchosen one inside its rank band; call them comparable.
-- You may use your tools to look at a tract's neighbors or nearest clinics before deciding.
+- Before answering, call stop_distances on your four picks. If any pair is under 5 km, swap one
+  for another candidate and check again. You cannot judge distance from tract IDs.
+- You may use your other tools to look at a tract's neighbors or nearest clinics.
 
 Return ONLY JSON:
 {{"stops": [{{"saturday": 1, "geo_id": "...", "reason": "one or two sentences with numbers",
@@ -99,7 +101,7 @@ planner = LlmAgent(
     model=MODEL,
     description="Context A. Picks four Saturday stops from score_need candidates. Blind to demographics.",
     instruction=PLANNER_INSTRUCTION,
-    tools=[ToolboxToolset(server_url=TOOLBOX_URL, toolset_name="planner_drilldown")],
+    tools=[steps.stop_distances, ToolboxToolset(server_url=TOOLBOX_URL, toolset_name="planner_drilldown")],
     include_contents="none",          # never sees the Auditor's tool results in the conversation
     output_key="draft_plan",
 )

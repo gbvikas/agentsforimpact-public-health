@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinic Plan Console</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1d2433;--muted:#667085;--line:#e4e2da;--a:#2f5bd3;--a-soft:#e8eefc;
+--code:#c2620f;--code-soft:#fbeee2;--ok:#1f8a4c;--ok-soft:#e3f4ea;--warn:#b54708;--warn-soft:#fef0c7;--bad:#c0262d;--bad-soft:#fde8e8;--human:#1d2433}
+@media (prefers-color-scheme:dark){:root{--bg:#14161b;--card:#1d2028;--ink:#e8eaf0;--muted:#9aa3b2;--line:#2c313c;--a:#7ea0ff;--a-soft:#24304d;
+--code:#f0a35c;--code-soft:#3a2a1c;--ok:#5cc98b;--ok-soft:#1c3326;--warn:#f5b545;--warn-soft:#3a2e15;--bad:#f17a7f;--bad-soft:#3d1f22;--human:#e8eaf0}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:1000}
+h1{font-size:18px;margin:0 12px 0 0}h2{font-size:14px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+h3{font-size:14px;margin:12px 0 6px}
+button,select,input{font:inherit;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px}
+button.primary{background:var(--a);border-color:var(--a);color:#fff;font-weight:600}button:disabled{opacity:.5}
+main{display:grid;gap:16px;padding:16px 20px;grid-template-columns:repeat(12,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0}
+.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}.s12{grid-column:span 12}
+@media (max-width:900px){.s4,.s5,.s6,.s7,.s8{grid-column:span 12}main{padding:12px 16px}}
+.pill{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;background:var(--a-soft);color:var(--a)}
+.pill.code{background:var(--code-soft);color:var(--code)}.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.pill.human{background:var(--human);color:var(--card)}
+.muted{color:var(--muted)}.small{font-size:12px}
+#timeline{max-height:420px;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.ev{display:grid;grid-template-columns:62px 150px 1fr;gap:8px;padding:6px 8px;border-radius:8px;border:1px solid var(--line)}
+.ev .who{font-weight:600}.ev .what{white-space:pre-wrap;word-break:break-word;max-height:90px;overflow:auto}
+.ev.llm .who{color:var(--a)}.ev.code .who{color:var(--code)}
+#map{height:380px;border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600}
+.rounds{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.round{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.ctx{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media (max-width:700px){.ctx{grid-template-columns:1fr}}
+.ctxA{background:var(--a-soft);border-radius:8px;padding:8px 10px}.ctxB{background:var(--code-soft);border-radius:8px;padding:8px 10px}
+.bar{display:grid;grid-template-columns:110px 1fr 44px;gap:6px;align-items:center;font-size:12px;margin:3px 0}
+.bar .track{height:10px;background:var(--line);border-radius:5px;overflow:hidden}.bar .fill{height:100%;background:var(--a)}
+.bar .fill.ref{background:var(--code)}
+.md{white-space:normal}.md h1,.md h2,.md h3{text-transform:none;letter-spacing:0;color:var(--ink);font-size:15px;margin:14px 0 6px}
+.decision{border:2px solid var(--human);border-radius:12px;padding:12px 14px}
+.lesson{border-left:3px solid var(--a);padding:2px 8px;margin:6px 0}.lesson.auditor{border-color:var(--code)}.lesson.human{border-color:var(--human)}
+.empty{color:var(--muted);font-style:italic}
+</style>
+</head>
+<body>
+<header>
+  <h1>🚐 Clinic Plan Console <span class="muted small">Cook County, IL · 4 Saturdays</span></h1>
+  <span id="cfg" class="pill">config …</span>
+  <button id="runBtn" class="primary">Run planner</button>
+  <select id="runSel"><option value="">past runs…</option></select>
+  <button id="resetBtn" title="Clear memory for a fresh demo">Reset memory</button>
+  <span id="status" class="muted small"></span>
+</header>
+<main>
+  <section class="card s7"><h2>Live agent trace <span class="small">— who ran, which tools, which state keys they wrote</span></h2>
+    <div class="small muted" style="margin-bottom:8px"><span class="pill">LLM agent</span> <span class="pill code">code step</span> <span class="pill human">human</span></div>
+    <div id="timeline"><div class="empty">Press “Run planner” or pick a past run.</div></div></section>
+  <section class="card s5"><h2>Memory <span class="small">— what the system has learned</span></h2><div id="memory"></div></section>
+
+  <section class="card s12" id="decisionCard" hidden><div class="decision" id="decision"></div></section>
+
+  <section class="card s7"><h2>Where the van goes</h2><div id="map"></div>
+    <div class="small muted" style="margin-top:6px">Dots: every tract, darker = higher need score. Numbers: the 4 Saturdays. Distances are straight-line.</div></section>
+  <section class="card s5"><h2>The plan</h2><div id="plan" class="empty">No run yet.</div></section>
+
+  <section class="card s12"><h2>Planner ⇄ Auditor <span class="small">— Context A is blind to demographics; Context B is not</span></h2><div id="rounds" class="empty">No rounds yet.</div></section>
+
+  <section class="card s7"><h2>For the neighborhood <span class="small">— Explainer, EN + ES</span></h2><div id="outreach" class="md empty">No flyer yet.</div></section>
+  <section class="card s5"><h2>What we couldn’t tell you</h2><div id="limits" class="empty">No limits list yet.</div></section>
+
+  <section class="card s12"><h2>Claims ledger <span class="small">— every claim keeps its scale</span></h2><div id="claims" class="empty">No claims yet.</div></section>
+</main>
+<script>
+const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LLM=new Set(['planner','auditor','explainer']);let map,layer,poll;
+const api=(p,o)=>fetch(p,o).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
+
+function md(t){return esc(t).replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h3>$1</h3>').replace(/^# (.*)$/gm,'<h3>$1</h3>')
+ .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^---+$/gm,'<hr>').replace(/^[-*] (.*)$/gm,'• $1').replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>')}
+
+function routePill(r){return `<span class="pill ${r==='human'?'human':r==='revise'?'bad':'warn'}">${esc(r)}</span>`}
+
+function renderTimeline(evs){
+  if(!evs?.length){$('#timeline').innerHTML='<div class="empty">No events.</div>';return}
+  $('#timeline').innerHTML=evs.map(e=>{
+    const kind=LLM.has(e.author)?'llm':(e.author==='user'?'':'code');
+    let what=e.text?esc(e.text.length>600?e.text.slice(0,600)+' …':e.text):'';
+    if(e.tool_calls?.length)what+=`<div>→ tools: <b>${e.tool_calls.map(esc).join(', ')}</b></div>`;
+    if(e.tool_results?.length)what+=`<div class="muted">← results: ${e.tool_results.map(esc).join(', ')}</div>`;
+    if(e.state_keys?.length)what+=`<div class="small">writes state: ${e.state_keys.map(k=>`<code>${esc(k)}</code>`).join(' ')}</div>`;
+    if(e.escalate)what+=`<div class="small"><b>⏹ loop exit</b></div>`;
+    return `<div class="ev ${kind}"><span class="muted small">${esc(e.t||'')}</span><span class="who">${esc(e.author)}</span><div class="what">${what}</div></div>`}).join('');
+  $('#timeline').scrollTop=1e9}
+
+function renderMemory(m){
+  $('#cfg').textContent='score config: '+m.approved_config;
+  const hist=(m.config_history||[]).map(h=>`<div class="lesson human"><b>${esc(h.from)} → ${esc(h.to)}</b> by ${esc(h.approver)}<div class="small muted">${esc(h.date)} · ${esc(h.reason)}</div></div>`).join('');
+  const les=(m.lessons||[]).map(l=>`<div class="lesson ${esc(l.source)}"><span class="pill ${l.source==='human'?'human':'code'}">${esc(l.source)}</span> ${esc(l.text)}<div class="small muted">${esc(l.date)}</div></div>`).join('');
+  const months={};(m.visits||[]).forEach(v=>(months[v.month]=months[v.month]||[]).push(v.geo_id));
+  $('#memory').innerHTML=`<div><b>Approved score weights:</b> <span class="pill">${esc(m.approved_config)}</span> <span class="small muted">only a human can change this</span></div>
+   <h3>Config history</h3>${hist||'<div class="empty">No human changes yet.</div>'}
+   <h3>Lessons the Planner reads next run</h3>${les||'<div class="empty">None yet. Lessons come from audit flags and human decisions, never demographic detail.</div>'}
+   <h3>Visits remembered</h3>${Object.entries(months).map(([k,v])=>`<div class="small"><b>${esc(k)}</b>: ${v.map(esc).join(', ')}</div>`).join('')||'<div class="empty">None.</div>'}`}
+
+function renderMap(run){
+  if(!map){map=L.map('map').setView([41.84,-87.75],10);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:16}).addTo(map)}
+  if(layer)layer.remove();layer=L.layerGroup().addTo(map);
+  const sc=run.all_scores||[];if(!sc.length)return;const max=Math.max(...sc.map(s=>s.score)),min=Math.min(...sc.map(s=>s.score));
+  sc.forEach(s=>{const v=(s.score-min)/(max-min||1);L.circleMarker([s.latitude,s.longitude],{radius:3,stroke:false,fillOpacity:.15+.75*v*v,fillColor:'#2f5bd3'})
+    .bindTooltip(`${s.geo_id} · rank ${s.rank}<br>uninsured ${s.pct_uninsured}% · no car ${s.pct_no_vehicle}% · ${s.km_to_safety_net} km`).addTo(layer)});
+  const stops=run.final_plan?.stops||[];const pts=[];
+  stops.forEach(st=>{const s=sc.find(x=>x.geo_id===st.geo_id);if(!s)return;pts.push([s.latitude,s.longitude]);
+    L.marker([s.latitude,s.longitude],{icon:L.divIcon({className:'',html:`<div style="background:#c2620f;color:#fff;border-radius:50%;width:26px;height:26px;display:grid;place-items:center;font-weight:700;border:2px solid #fff">${st.saturday}</div>`})})
+    .bindPopup(`<b>Saturday ${st.saturday}</b> · ${st.geo_id}<br>${esc(st.reason)}`).addTo(layer)});
+  if(pts.length)map.fitBounds(pts,{padding:[60,60],maxZoom:12})}
+
+function renderPlan(run){
+  const st=run.final_plan?.stops||[];const meta=run.score_meta||{};
+  $('#plan').classList.toggle('empty',!st.length);
+  $('#plan').innerHTML=`<div class="small">score_need <span class="pill code">${esc(meta.config_version)}</span> ${esc(meta.formula||'')}</div>
+  <div class="small muted" style="margin:4px 0 8px">${esc(meta.why||'')} · ${meta.n_scored||0} tracts scored</div>
+  <div>Audit: ${run.audit_passed?'<span class="pill ok">passed</span>':'<span class="pill bad">open revise flags</span>'} ${(run.human_flags||[]).length?'<span class="pill human">needs human decision</span>':''}</div>
+  <table style="margin-top:8px"><tr><th>Sat</th><th>Tract</th><th>Why</th></tr>${st.map(s=>`<tr><td><b>${s.saturday}</b></td><td>${esc(s.geo_id)}</td><td>${esc(s.reason)}<div class="small muted">${(s.claim_ids||[]).map(esc).join(' · ')}</div></td></tr>`).join('')}</table>
+  ${run.final_plan?.tradeoffs?`<div class="small" style="margin-top:8px"><b>Trade-offs:</b> ${esc(run.final_plan.tradeoffs)}</div>`:''}`}
+
+function bars(d){if(!d)return'';const g=['black_pop','hispanic_pop','white_pop','asian_pop'],lab={black_pop:'Black',hispanic_pop:'Hispanic',white_pop:'White non-Hisp.',asian_pop:'Asian'};
+  return `<div class="small muted">Plan’s tracts (blue) vs county’s most-uninsured tenth (orange)</div>`+g.map(k=>`<div class="bar"><span>${lab[k]}</span><div><div class="track"><div class="fill" style="width:${d.plan[k]}%"></div></div><div class="track" style="margin-top:2px"><div class="fill ref" style="width:${d.most_uninsured_tenth[k]||0}%"></div></div></div><span>${d.plan[k]}%<br><span class="muted">${d.most_uninsured_tenth[k]??'–'}%</span></span></div>`).join('')}
+
+function renderRounds(run){
+  const rs=run.rounds||[];if(!rs.length){$('#rounds').innerHTML='<div class="empty">No rounds.</div>';return}
+  $('#rounds').classList.remove('empty');
+  $('#rounds').innerHTML=`<div class="rounds">${rs.map(r=>`<div class="round"><h3>Round ${r.round} · ${r.verdict==='pass'?'<span class="pill ok">PASS</span>':'<span class="pill bad">REJECTED → revise</span>'}</h3>
+   <div class="ctx"><div class="ctxA"><div class="small"><b>Planner draft</b> (Context A)</div>
+    ${(r.draft_plan?.stops||[]).map(s=>`<div class="small">Sat ${s.saturday}: <b>${esc(s.geo_id)}</b></div>`).join('')||'<div class="empty">unparseable</div>'}</div>
+   <div class="ctxB"><div class="small"><b>Auditor findings</b> (Context B)</div>
+    ${(r.flags||[]).map(f=>`<div class="small">${routePill(f.route)} <b>${esc(f.code)}</b> ${esc(f.detail||'')}</div>`).join('')||'<div class="small">no flags</div>'}</div></div>
+   ${r.auditor_summary?`<div class="small" style="margin-top:8px">${esc(r.auditor_summary)}</div>`:''}
+   ${r.demographics?`<div style="margin-top:8px">${bars(r.demographics)}</div>`:''}</div>`).join('')}</div>
+   <div class="small muted" style="margin-top:8px">Only flag codes, tract IDs and claim IDs go back to the Planner. Demographic findings route to the human.</div>`}
+
+function renderDecision(run,mem){
+  const hf=run.human_flags||[];$('#decisionCard').hidden=!hf.length;if(!hf.length)return;
+  const canSwitch=mem.approved_config!=='v1';
+  const dflt=canSwitch?'v0 sent the van to insured suburbs; the audit showed the plan missed the most-uninsured neighborhoods. Need should lead and distance should only count without a car.'
+    :'Four stops cannot mirror the whole most-uninsured tenth; keep v1 and add a Spanish-language West/Southwest Side stop next month.';
+  $('#decision').innerHTML=`<h3 style="margin-top:0">🧑‍⚖️ Human decision needed</h3>${hf.map(f=>`<div>${routePill('human')} <b>${esc(f.code)}</b> ${esc(f.detail||'')}</div>`).join('')}
+   <p class="small">The Auditor may not steer the Planner by demographics. The outreach lead decides: change the scoring weights, or accept the plan with the flag on record. Either choice is remembered.</p>
+   <input id="reason" style="width:min(640px,100%)" value="${esc(dflt)}">
+   ${canSwitch?'<button class="primary" id="approveBtn">Approve config v1</button>':''}
+   <button id="ackBtn">Accept plan, flag on record</button>`;
+  const done=async m=>{$('#decisionCard').hidden=true;renderMemory(await api('/api/memory'));$('#status').textContent=m};
+  if(canSwitch)$('#approveBtn').onclick=async()=>{await api('/api/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:'v1',reason:$('#reason').value})});done('Approved v1. Run the planner again.')};
+  $('#ackBtn').onclick=async()=>{await api('/api/acknowledge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:$('#reason').value})});done('Plan accepted with flag on record.')}}
+
+function renderLimits(run){const l=run.limits||[];$('#limits').classList.toggle('empty',!l.length);
+  $('#limits').innerHTML=l.map(x=>`<div style="margin:0 0 8px"><b>${esc(x.what)}</b> ${esc(x.why)}<div class="small muted"><code>${esc(x.code)}</code> · ${x.claim_ids.length} claim(s)</div></div>`).join('')}
+
+function renderClaims(run){const c=Object.values(run.claims||{});if(!c.length)return;$('#claims').classList.remove('empty');
+  const sp={tract:'',county:'warn',health_service_area:'warn',facility_point:'code'};
+  const ad={cleared:'ok',flagged:'bad',not_reviewed:''};
+  c.sort((a,b)=>(a.audit===b.audit?0:a.audit==='not_reviewed'?1:-1));
+  $('#claims').innerHTML=`<div style="max-height:320px;overflow:auto"><table><tr><th>claim</th><th>measure</th><th>value</th><th>scale</th><th>source</th><th>caveats</th><th>audit</th></tr>
+  ${c.map(x=>`<tr><td><code>${esc(x.claim_id)}</code></td><td>${esc(x.measure)}</td><td>${esc(typeof x.value==='object'?JSON.stringify(x.value).slice(0,80):x.value)}</td><td><span class="pill ${sp[x.scale]||''}">${esc(x.scale)}</span></td><td class="small">${esc(x.source)}</td><td class="small">${(x.caveats||[]).map(esc).join(', ')}</td><td><span class="pill ${ad[x.audit]||''}">${esc(x.audit)}</span></td></tr>`).join('')}</table></div>`}
+
+async function loadRun(id){const run=await api('/api/runs/'+id);const mem=await api('/api/memory');
+  renderMap(run);renderPlan(run);renderRounds(run);renderLimits(run);renderClaims(run);renderDecision(run,mem);
+  $('#outreach').classList.toggle('empty',!run.outreach);$('#outreach').innerHTML=run.outreach?md(run.outreach):'No flyer.';renderMemory(mem)}
+
+async function refreshRuns(sel){const ids=await api('/api/runs');$('#runSel').innerHTML='<option value="">past runs…</option>'+ids.map(i=>`<option ${i===sel?'selected':''}>${i}</option>`).join('')}
+
+$('#runSel').onchange=e=>e.target.value&&loadRun(e.target.value);
+$('#resetBtn').onclick=async()=>{if(!confirm('Clear memory (config back to v0-blueprint, no lessons, no visits)?'))return;renderMemory(await api('/api/reset-memory',{method:'POST'}));$('#status').textContent='Memory reset.'};
+$('#runBtn').onclick=async()=>{$('#runBtn').disabled=true;$('#status').textContent='Running…';
+  try{await api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}catch(e){$('#status').textContent='Could not start: '+e;$('#runBtn').disabled=false;return}
+  clearInterval(poll);poll=setInterval(async()=>{const l=await api('/api/live');renderTimeline(l.events);
+    if(!l.running){clearInterval(poll);$('#runBtn').disabled=false;$('#status').textContent=l.error?('Error: '+l.error):'Done.';
+      if(l.run_id){await refreshRuns(l.run_id);loadRun(l.run_id)}}},1000)};
+
+(async()=>{renderMemory(await api('/api/memory'));const ids=await api('/api/runs');await refreshRuns(ids[0]);if(ids[0])loadRun(ids[0]);
+  const l=await api('/api/live');if(l.events?.length)renderTimeline(l.events)})();
+</script>
+</body>
+</html>

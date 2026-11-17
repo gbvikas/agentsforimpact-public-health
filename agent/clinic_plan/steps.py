@@ -44,7 +44,8 @@ LIMIT_TEXT = {
     "NOT_A_CANDIDATE": ("—", "A draft plan chose a tract that score_need did not rank."),
     "UNKNOWN_CLAIM": ("—", "A draft plan cited a claim that is not in the ledger."),
     "SCALE_MISUSE": ("—", "A draft reason used a county or regional figure to justify a neighborhood."),
-    "OVERCLAIM_TIE": ("—", "A draft reason ranked a tract above one in the same tie band."),
+    "OVERCLAIM_TIE": ("—", "A draft reason ranked a tract (e.g. '#1', 'highest') although its score is "
+                           "tied with tracts not chosen. Describe tied tracts as comparable."),
     "DEMOGRAPHIC_DISPARITY": ("Whether the plan reaches the same people as the county's highest-need tracts.",
                               "The audit found a gap above the county threshold; a human must decide."),
     "NOT_AUDITED": ("Whether this plan passed audit.", "The audit did not finish."),
@@ -158,8 +159,12 @@ async def audit_gate(state):
                 claims[cid] = {**claims[cid], "audit": "flagged",
                                "flags": sorted(set(claims[cid].get("flags", []) + [f["code"]]))}
     # The Planner sees only codes, tract IDs, claim IDs and the rule. Never demographic detail.
+    # Details are only forwarded for flags computed by code from non-demographic fields.
+    safe_detail = {"STOPS_TOO_CLOSE", "NOT_A_CANDIDATE", "OVERCLAIM_TIE", "UNKNOWN_CLAIM"}
     revise_request = "\n".join(
-        f"- {f['code']}: {LIMIT_TEXT.get(f['code'], ('', ''))[1]} Claims/tracts: {', '.join(f.get('claim_ids', [])) or 'n/a'}"
+        f"- {f['code']}: {LIMIT_TEXT.get(f['code'], ('', ''))[1]} "
+        + (f"({f['detail']}) " if f["code"] in safe_detail and f.get("detail") else "")
+        + f"Claims/tracts: {', '.join(f.get('claim_ids', [])) or 'n/a'}"
         for f in revise) or "none"
     rounds = list(state.get("rounds", [])) + [{
         "round": rnd, "draft_plan": parse_json(state.get("draft_plan")),
@@ -264,6 +269,21 @@ async def limits_and_persist(state):
             f"({len(mem['lessons'])} lessons, {len(mem['visits'])} visits).")
 
 
+# ------------------------------------------------------------------ Planner tool
+def stop_distances(geo_ids: list[str], tool_context: ToolContext) -> dict:
+    """Straight-line km between every pair of candidate tracts you are considering. Call it on your
+    four picks before answering; every pair must be at least 5 km apart."""
+    pool = {r["geo_id"]: r for r in tool_context.state.get("all_scores", [])}
+    pairs, missing = [], [g for g in geo_ids if g not in pool]
+    ok = [g for g in geo_ids if g in pool]
+    for i, a in enumerate(ok):
+        for b in ok[i + 1:]:
+            d = round(km_between(pool[a], pool[b]), 2)
+            pairs.append({"a": a, "b": b, "km": d, "ok": d >= MIN_KM_BETWEEN_STOPS})
+    return {"pairs": pairs, "all_ok": all(p["ok"] for p in pairs), "unknown_tracts": missing,
+            "min_km_required": MIN_KM_BETWEEN_STOPS}
+
+
 # ------------------------------------------------------------------ Auditor tool
 async def check_plan(tool_context: ToolContext) -> dict:
     """Run the deterministic audit checks on the current draft plan: spacing, candidate and claim
@@ -302,6 +322,15 @@ async def check_plan(tool_context: ToolContext) -> dict:
                    for o in cands.values())]
     if ties:
         flags.append({"code": "NO_INTERVAL", "claim_ids": ties, "route": "ledger"})
+    # Ranking language for a tract that sits in a tie band with an unchosen tract is an overclaim.
+    rank_words = re.compile(r"(#\s*\d|\branked?\s*(first|second|third|\d)|\bhighest\b|\btop[- ]ranked\b|"
+                            r"\bsecond[- ]highest\b|\bmost (in )?need)", re.I)
+    for s in stops:
+        c = cands.get(s.get("geo_id"))
+        if c and c["claim_ids"]["score"] in ties and rank_words.search(s.get("reason", "")):
+            flags.append({"code": "OVERCLAIM_TIE", "route": "revise", "claim_ids": [c["claim_ids"]["score"]],
+                          "detail": f"reason for {c['geo_id']} ranks it, but its score is tied with an "
+                                    f"unchosen tract (rank band {c['rank_band'][0]}-{c['rank_band'][1]})"})
 
     demo = None
     if chosen:

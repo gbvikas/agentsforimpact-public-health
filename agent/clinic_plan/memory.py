@@ -41,6 +41,20 @@ def add_lesson(mem: dict, text: str, source: str) -> None:
         mem["lessons"].append({"date": now(), "source": source, "text": text})
 
 
+def acknowledge_flags(reason: str, approver: str = "outreach lead") -> dict:
+    """Human action: accept the plan with its open human-routed flags. The reason is kept in the
+    decision log (human-only); the Planner's lesson carries no demographic detail."""
+    mem = load()
+    codes = sorted({f["code"] for f in mem.get("pending_human_flags", [])})
+    mem.setdefault("decisions", []).append({"date": now(), "approver": approver, "accepted_flags": codes,
+                                            "reason": reason})
+    mem["pending_human_flags"] = []
+    add_lesson(mem, f"A human accepted a plan with open flag(s) {', '.join(codes) or 'none'} and kept the "
+                    f"current weights; the decision is logged for the funder report.", "human")
+    save(mem)
+    return mem
+
+
 def approve_config(version: str, reason: str, approver: str = "outreach lead") -> dict:
     """Human action: switch the weights score_need uses on the next run."""
     mem = load()
