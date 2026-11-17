@@ -44,6 +44,7 @@ th{color:var(--muted);font-weight:600}
 .decision{border:2px solid var(--human);border-radius:12px;padding:12px 14px}
 .lesson{border-left:3px solid var(--a);padding:2px 8px;margin:6px 0}.lesson.auditor{border-color:var(--code)}.lesson.human{border-color:var(--human)}
 .empty{color:var(--muted);font-style:italic}
+body.only header{display:none}body.only main>section{display:none}body.only main>section.show{display:block;grid-column:span 12}
 </style>
 </head>
 <body>
@@ -56,23 +57,23 @@ th{color:var(--muted);font-weight:600}
   <span id="status" class="muted small"></span>
 </header>
 <main>
-  <section class="card s7"><h2>Live agent trace <span class="small">— who ran, which tools, which state keys they wrote</span></h2>
+  <section data-k="trace" class="card s7"><h2>Live agent trace <span class="small">— who ran, which tools, which state keys they wrote</span></h2>
     <div class="small muted" style="margin-bottom:8px"><span class="pill">LLM agent</span> <span class="pill code">code step</span> <span class="pill human">human</span></div>
     <div id="timeline"><div class="empty">Press “Run planner” or pick a past run.</div></div></section>
-  <section class="card s5"><h2>Memory <span class="small">— what the system has learned</span></h2><div id="memory"></div></section>
+  <section data-k="memory" class="card s5"><h2>Memory <span class="small">— what the system has learned</span></h2><div id="memory"></div></section>
 
-  <section class="card s12" id="decisionCard" hidden><div class="decision" id="decision"></div></section>
+  <section data-k="decision" class="card s12" id="decisionCard" hidden><div class="decision" id="decision"></div></section>
 
-  <section class="card s7"><h2>Where the van goes</h2><div id="map"></div>
+  <section data-k="map" class="card s7"><h2>Where the van goes</h2><div id="map"></div>
     <div class="small muted" style="margin-top:6px">Dots: every tract, darker = higher need score. Numbers: the 4 Saturdays. Distances are straight-line.</div></section>
-  <section class="card s5"><h2>The plan</h2><div id="plan" class="empty">No run yet.</div></section>
+  <section data-k="plan" class="card s5"><h2>The plan</h2><div id="plan" class="empty">No run yet.</div></section>
 
-  <section class="card s12"><h2>Planner ⇄ Auditor <span class="small">— Context A is blind to demographics; Context B is not</span></h2><div id="rounds" class="empty">No rounds yet.</div></section>
+  <section data-k="rounds" class="card s12"><h2>Planner ⇄ Auditor <span class="small">— Context A is blind to demographics; Context B is not</span></h2><div id="rounds" class="empty">No rounds yet.</div></section>
 
-  <section class="card s7"><h2>For the neighborhood <span class="small">— Explainer, EN + ES</span></h2><div id="outreach" class="md empty">No flyer yet.</div></section>
-  <section class="card s5"><h2>What we couldn’t tell you</h2><div id="limits" class="empty">No limits list yet.</div></section>
+  <section data-k="outreach" class="card s7"><h2>For the neighborhood <span class="small">— Explainer, EN + ES</span></h2><div id="outreach" class="md empty">No flyer yet.</div></section>
+  <section data-k="limits" class="card s5"><h2>What we couldn’t tell you</h2><div id="limits" class="empty">No limits list yet.</div></section>
 
-  <section class="card s12"><h2>Claims ledger <span class="small">— every claim keeps its scale</span></h2><div id="claims" class="empty">No claims yet.</div></section>
+  <section data-k="claims" class="card s12"><h2>Claims ledger <span class="small">— every claim keeps its scale</span></h2><div id="claims" class="empty">No claims yet.</div></section>
 </main>
 <script>
 const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -180,7 +181,8 @@ $('#runBtn').onclick=async()=>{$('#runBtn').disabled=true;$('#status').textConte
     if(!l.running){clearInterval(poll);$('#runBtn').disabled=false;$('#status').textContent=l.error?('Error: '+l.error):'Done.';
       if(l.run_id){await refreshRuns(l.run_id);loadRun(l.run_id)}}},1000)};
 
-(async()=>{renderMemory(await api('/api/memory'));const ids=await api('/api/runs');await refreshRuns(ids[0]);if(ids[0])loadRun(ids[0]);
+(async()=>{const q=new URLSearchParams(location.search);if(q.get('only')){document.body.classList.add('only');q.get('only').split(',').forEach(k=>document.querySelector(`[data-k="${k}"]`)?.classList.add('show'))}
+  renderMemory(await api('/api/memory'));const ids=await api('/api/runs');const pick=q.get('run')||ids[0];await refreshRuns(pick);if(pick)loadRun(pick);
   const l=await api('/api/live');if(l.events?.length)renderTimeline(l.events)})();
 </script>
 </body>
