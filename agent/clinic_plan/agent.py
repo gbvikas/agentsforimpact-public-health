@@ -19,7 +19,7 @@ load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 from google.adk.agents import LlmAgent, LoopAgent, ParallelAgent, SequentialAgent  # noqa: E402
 from toolbox_adk import ToolboxToolset  # noqa: E402
 
-from . import steps  # noqa: E402
+from . import outreach, steps  # noqa: E402
 from .toolbox_bridge import auth_headers  # noqa: E402
 
 MODEL = os.environ.get("MODEL", "gemini-3.6-flash")
@@ -104,6 +104,29 @@ For each stop write, in English and then in Spanish:
    next door" in plain words using the next-door comparison.
 Use markdown headings per stop."""
 
+OUTREACH_INSTRUCTION = """You advise an outreach lead on HOW to reach the neighborhood around each van stop. You plan for
+places, never people. Code has already chosen the channels from the tract's numbers. You cannot add, remove
+or rename a channel and you cannot invent a place. Your job is to reason: put the chosen channels in a
+sensible order for this neighborhood and say why, tying each reason to a number or a named place below.
+
+Evidence per stop (channels were chosen by code):
+{channel_brief}
+
+Rules:
+- Use only the channels listed for that stop, written exactly as the code names them (poster, door_script,
+  print_first, radio, spanish_first, radio_es, phone_tree, senior_center, sms, social).
+- Put the 3 to 4 most useful channels first in "priority", each with a "because" in plain words that cites the
+  evidence (for example "about 1 in 4 residents are 65 or older, so phone calls through a named senior center").
+- Name only places from "Named public places nearby", exactly as written. If none were found, say so in the
+  caveat and suggest asking local partners.
+- Never mention race, ethnicity or health conditions. Never suggest lists of individuals or health details in messages.
+- Add one sentence "caveat" naming what you could not tell (sparse map data, or that only English and Spanish are covered).
+- Add one plain "headline" sentence on how to reach this neighborhood.
+
+Return ONLY JSON:
+{{"stops": [{{"saturday": 1, "headline": "...", "priority": [{{"channel": "poster", "because": "..."}}],
+  "places": ["exact place names you used"], "caveat": "..."}}]}}"""
+
 planner = LlmAgent(
     name="planner",
     model=MODEL,
@@ -135,6 +158,15 @@ explainer = LlmAgent(
     output_key="outreach",
 )
 
+outreach_reasoner = LlmAgent(
+    name="outreach_reasoner",
+    model=MODEL,
+    description="Orders the code-chosen outreach channels for each stop and explains why, using named places.",
+    instruction=OUTREACH_INSTRUCTION,
+    include_contents="none",
+    output_key="outreach_reasoning_raw",
+)
+
 root_agent = SequentialAgent(
     name="clinic_plan",
     description="EquiVita: plans four Saturday mobile clinic stops for a county and explains them.",
@@ -151,6 +183,11 @@ root_agent = SequentialAgent(
             steps.step("audit_gate", "Merges audit flags; only codes go back to the Planner.", steps.audit_gate),
         ]),
         steps.step("finalize_plan", "Clears claims and gathers facts for the Explainer.", steps.finalize_plan),
+        steps.step("plan_channels", "Code picks outreach channels per stop from tract data and finds named places.",
+                   outreach.plan_channels),
+        outreach_reasoner,
+        steps.step("outreach_check", "Keeps only channels code picked and places on the map list.",
+                   outreach.check_outreach),
         explainer,
         steps.step("limits_and_persist", "Builds the limits list, saves the run, updates memory.",
                    steps.limits_and_persist),

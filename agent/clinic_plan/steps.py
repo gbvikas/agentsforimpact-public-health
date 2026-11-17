@@ -48,6 +48,8 @@ LIMIT_TEXT = {
                            "tied with tracts not chosen. Describe tied tracts as comparable."),
     "DEMOGRAPHIC_DISPARITY": ("Whether the plan reaches the same people as the county's highest-need tracts.",
                               "The audit found a gap above the county threshold; a human must decide."),
+    "LANGUAGE_UNSPECIFIED": ("Which languages residents need.",
+                             "The data counts limited-English households but not their language; we default to Spanish."),
     "NOT_AUDITED": ("Whether this plan passed audit.", "The audit did not finish."),
     "FIELD_OBSERVATION": ("How typical one Saturday was.",
                           "Field reports are one nurse's observations from one day, not a measurement."),
@@ -126,14 +128,14 @@ async def run_score_need(state):
     version = state["score_config_version"]
     out = score_need(state["ev_tracts"], version)
     claims = {**out["claims"], **state.get("context_claims", {}), **state.get("field_claims", {})}
-    lines = ["rank | tract | score | rank band | uninsured% | no-vehicle% | limited-English% | km to safety net "
+    lines = ["rank | tract | score | rank band | uninsured% | no-vehicle% | km to safety net "
              "| shortage score | claim ids"]
     for c in out["candidates"]:
         ids = c["claim_ids"]
         lines.append(f"{c['rank']} | {c['geo_id']} | {c['score']} | {c['rank_band'][0]}-{c['rank_band'][1]} | "
-                     f"{c['pct_uninsured']} | {c['pct_no_vehicle']} | {c['pct_limited_english']} | "
+                     f"{c['pct_uninsured']} | {c['pct_no_vehicle']} | "
                      f"{c['km_to_safety_net']} | {c['hpsa_score']} | "
-                     f"{ids['pct_uninsured']}, {ids['pct_no_vehicle']}, {ids['pct_limited_english']}, "
+                     f"{ids['pct_uninsured']}, {ids['pct_no_vehicle']}, "
                      f"{ids['km_to_safety_net']}, {ids['hpsa_score']}, {ids['score']}")
     lines.append("context claims (NOT tract-level): c-ctx-air (scale: county), c-ctx-resp (scale: health service area)")
     return ({"candidates": out["candidates"], "claims": claims, "score_meta": out["meta"],
@@ -245,6 +247,14 @@ async def limits_and_persist(state):
     for r in state.get("rounds", []):
         for f in r["flags"]:
             codes.setdefault(f["code"], set()).update(f.get("claim_ids", []))
+    for p in state.get("channel_plan", []):          # outreach claims are cited by the channel plan, not the stops
+        for c in p["channels"]:
+            cl = claims.get(c.get("claim_id") or "")
+            for code in (cl or {}).get("caveats", []):
+                codes.setdefault(code, set()).add(cl["claim_id"])
+        lang = claims.get(f"c-{p['geo_id'][-6:]}-limited_english")
+        if lang:
+            codes.setdefault("LANGUAGE_UNSPECIFIED", set()).add(lang["claim_id"])
     if not state.get("rounds"):
         codes.setdefault("NOT_AUDITED", set())
     limits = [{"code": k, "what": LIMIT_TEXT.get(k, (k, ""))[0], "why": LIMIT_TEXT.get(k, ("", k))[1],
@@ -271,7 +281,7 @@ async def limits_and_persist(state):
 
     os.makedirs(RUNS_DIR, exist_ok=True)
     keys = ["score_config_version", "score_meta", "candidates", "rounds", "final_plan", "human_flags",
-            "audit_passed", "audit_status", "outreach", "past_lessons", "recent_visits", "ev_context",
+            "audit_passed", "audit_status", "outreach", "channel_plan", "outreach_plan", "past_lessons", "recent_visits", "ev_context",
             "stop_details"]
     record = {k: state.get(k) for k in keys}
     record.update(run_id=run_id, limits=limits, claims=claims,

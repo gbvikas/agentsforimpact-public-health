@@ -14,13 +14,12 @@ SCORE_CONFIGS = {
         "why": "The intuitive formula: most need, least access. Multiplying by km rewards distance.",
     },
     "v1": {
-        "label": ".55 need (.6 uninsured, .4 chronic) + .35 barrier (no vehicle, limited English, "
+        "label": ".55 need (.6 uninsured, .4 chronic) + .35 barrier (no vehicle, "
                  "car-less km) + .10 shortage area",
         "kind": "additive",
         "w_need": 0.55, "w_unins": 0.6, "w_chronic": 0.4,
         "w_barrier": 0.35, "w_shortage": 0.10,
-        "why": "Need leads; distance only counts for households without a car; language is an "
-               "access barrier.",
+        "why": "Need leads; distance only counts for households without a car.",
     },
 }
 
@@ -28,7 +27,6 @@ MEASURE_SOURCES = {
     "pct_uninsured": ("burden_tracts.pct_uninsured", ["MODELED_PREVALENCE"]),
     "pct_diabetes": ("burden_tracts.pct_diabetes", ["MODELED_PREVALENCE"]),
     "pct_no_vehicle": ("burden_tracts.pct_no_vehicle", ["SURVEY_ESTIMATE"]),
-    "pct_limited_english": ("burden_tracts.pct_limited_english", ["SURVEY_ESTIMATE"]),
     "km_to_safety_net": ("tract_access.km_to_safety_net", ["STRAIGHT_LINE_KM", "FEDERAL_SITES_ONLY"]),
     "hpsa_score": ("shortage_areas.HPSA_SCORE", ["HPSA_MAX_OF_DESIGNATIONS"]),
 }
@@ -44,14 +42,13 @@ def score_need(rows: list[dict], version: str, top_n: int = 25) -> dict:
     cfg = SCORE_CONFIGS[version]
     df = pd.DataFrame(rows)
     needed = ["pct_uninsured", "pct_diabetes", "pct_high_bp", "pct_copd", "pct_no_vehicle",
-              "pct_limited_english", "km_to_safety_net"]
+              "km_to_safety_net"]
     missing = df[df[needed].isna().any(axis=1)]
     df = df.dropna(subset=needed).copy()
 
     df["pr_unins"] = _pr(df.pct_uninsured)
     df["pr_chronic"] = (_pr(df.pct_diabetes) + _pr(df.pct_high_bp) + _pr(df.pct_copd)) / 3
     df["pr_noveh"] = _pr(df.pct_no_vehicle)
-    df["pr_lep"] = _pr(df.pct_limited_english)
     df["pr_carless_km"] = _pr(df.km_to_safety_net * df.pct_no_vehicle)
     df["shortage"] = ((df.hpsa_score.astype(float) - 10) / 15).fillna(0).clip(0, 1)
 
@@ -61,7 +58,7 @@ def score_need(rows: list[dict], version: str, top_n: int = 25) -> dict:
         df["score"] = df.need * df.barrier
     else:
         df["need"] = cfg["w_unins"] * df.pr_unins + cfg["w_chronic"] * df.pr_chronic
-        df["barrier"] = (df.pr_noveh + df.pr_lep + df.pr_carless_km) / 3
+        df["barrier"] = (df.pr_noveh + df.pr_carless_km) / 2
         df["score"] = (cfg["w_need"] * df.need + cfg["w_barrier"] * df.barrier
                        + cfg["w_shortage"] * df.shortage)
 
@@ -100,12 +97,11 @@ def score_need(rows: list[dict], version: str, top_n: int = 25) -> dict:
             need=round(float(r.need), 3), barrier=round(float(r.barrier), 3),
             total_pop=int(r.total_pop), latitude=float(r.latitude), longitude=float(r.longitude),
             pct_uninsured=float(r.pct_uninsured), pct_no_vehicle=float(r.pct_no_vehicle),
-            pct_limited_english=float(r.pct_limited_english),
             pct_diabetes=float(r.pct_diabetes), pct_high_bp=float(r.pct_high_bp), pct_copd=float(r.pct_copd),
             km_to_safety_net=float(r.km_to_safety_net),
             # Percent ranks (0-1, within county) that feed the formula, so the UI can show why a tract scored high.
             components=dict(uninsured=round(float(r.pr_unins), 3), chronic=round(float(r.pr_chronic), 3),
-                            no_vehicle=round(float(r.pr_noveh), 3), limited_english=round(float(r.pr_lep), 3),
+                            no_vehicle=round(float(r.pr_noveh), 3),
                             carless_km=round(float(r.pr_carless_km), 3), shortage=round(float(r.shortage), 3)),
             hpsa_score=None if pd.isna(r.hpsa_score) else int(r.hpsa_score),
             claim_ids={**ids, "score": sid}))

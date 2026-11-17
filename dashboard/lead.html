@@ -107,6 +107,21 @@ tr.chosen td{background:var(--accent-soft)}tr.chosen td:first-child{border-radiu
 .flyer b{display:block;margin-bottom:4px}
 .say{border-left:3px solid var(--accent);padding:2px 0 2px 14px;font-size:14px;color:var(--ink)}
 .say small{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:3px}
+.out{margin-top:18px;background:var(--accent-soft);border-radius:20px;padding:16px}
+.out .oh{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px}
+.out .oh em{font-style:normal;font-size:18px}
+.out .hl{font-size:14.5px;font-weight:600;margin:0 0 12px;line-height:1.4}
+.out ol{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px}
+.out li{display:grid;grid-template-columns:38px 1fr;gap:10px;align-items:center;background:var(--surface);border-radius:14px;padding:9px 12px}
+.out li .ic{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--soft);font-size:19px}
+.out li b{display:block;font-size:13.5px;font-weight:600}.out li span{display:block;font-size:12.5px;color:var(--muted);line-height:1.4}
+.out .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.out .chip2{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border-radius:999px;padding:4px 11px 4px 8px;font-size:12.5px}
+.out .chip2 small{color:var(--faint);font-size:11px}
+.out .omap{height:190px;border-radius:14px;margin:0 0 12px}
+.out .row{font-size:12.5px;color:var(--muted);margin:0 0 6px}.out .row b{color:var(--ink);font-weight:600}
+.out .cv{font-size:12px;color:var(--faint);margin:6px 0 0}
+.guard{margin-top:20px;font-size:12px;color:var(--muted)}.guard b{color:var(--ink)}
 details{margin-top:56px;border-top:1px solid var(--line);padding:18px 0}
 summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--muted)}
 .empty{color:var(--faint);font-style:italic}
@@ -191,13 +206,13 @@ function renderPlanner(r){
   $('#stats').innerHTML=`<div class="stat"><b>${(m.n_scored||0).toLocaleString()}</b><span>census tracts scored</span></div>
    <div class="stat"><b>${esc(m.config_version||'')}</b><span>score version</span></div>
    <div class="stat"><b>${(r.candidates||[]).length}</b><span>candidates shortlisted</span></div>`;
-  const rows=(r.candidates||[]).slice(0,10);
+  const all=r.candidates||[],rows=all.filter((c,i)=>i<10||stops.includes(c.geo_id)); // top 10 plus any chosen stop ranked lower
   const M=(c,k,l)=>c.components?`<div class="m" title="${l}: ${(c.components[k]*100).toFixed(0)}th percentile in county"><i><u style="width:${c.components[k]*100}%"></u></i><small>${l}</small></div>`:'';
   $('#cands').classList.remove('empty');
   $('#cands').innerHTML=`<table><tr><th>#</th><th>Tract</th><th>Score</th><th>Why it scored</th><th class="num">Uninsured</th><th class="num">No car</th><th class="num">To clinic</th></tr>
   ${rows.map(c=>`<tr class="${stops.includes(c.geo_id)?'chosen':''}"><td class="num">${c.rank}</td>
    <td>${stops.includes(c.geo_id)?`<span class="sat">${sat[c.geo_id]}</span> `:''}${esc(c.geo_id)}</td><td class="num"><b>${c.score.toFixed(2)}</b></td>
-   <td><div class="meter">${M(c,'uninsured','Insur.')}${M(c,'chronic','Chronic')}${M(c,'no_vehicle','No car')}${M(c,'limited_english','English')}${M(c,'carless_km','Distance')}</div></td>
+   <td><div class="meter">${M(c,'uninsured','Insur.')}${M(c,'chronic','Chronic')}${M(c,'no_vehicle','No car')}${M(c,'carless_km','Distance')}</div></td>
    <td class="num">${c.pct_uninsured}%</td><td class="num">${c.pct_no_vehicle}%</td><td class="num">${c.km_to_safety_net} km</td></tr>`).join('')}</table>
   <div style="padding:10px 10px 0;font-size:12px;color:var(--muted)">Formula: ${esc(m.formula||'')}. ${esc(m.why||'')} Bars show where the tract ranks within the county.</div>`;
   const by={};Object.values(r.claims||{}).filter(c=>c.scale==='tract'&&c.measure!=='score').forEach(c=>{by[c.measure]??=c});
@@ -277,7 +292,31 @@ function renderNeighbors(r){
    return `<div class="nb"><div class="top"><span class="sat">${s.saturday}</span><div><b>${LANG==='en'?'Saturday':'Sábado'} ${s.saturday}</b><small>Tract ${esc(s.geo_id)}</small></div></div>
     <div class="body"><p class="why">${esc(s.reason)}</p>
     ${f?`<div class="flyer"><b>${LANG==='en'?'Flyer':'Folleto'}</b>${inline(clean(f.body))}</div>`:'<div class="empty">No cleared facts for this stop.</div>'}
-    ${sy?`<div class="say"><small>${sub}</small>${inline(sy.body)}</div>`:''}</div></div>`}).join('')}
+    ${sy?`<div class="say"><small>${sub}</small>${inline(sy.body)}</div>`:''}${outreachBlock(r,s)}</div></div>`}).join('')
+  const g=r.outreach_plan?.guardrails;$('#neigh').insertAdjacentHTML('beforeend',g?`<div class="guard" style="grid-column:1/-1"><b>Outreach guardrails.</b> ${g.map(esc).join(' ')}</div>`:'');initOutreachMaps(r)}
+const CH_ICON={poster:'📌',door_script:'🚪',print_first:'🧺',radio:'📻',spanish_first:'🗣️',radio_es:'📻',phone_tree:'📞',senior_center:'🧓',sms:'💬',social:'👥'};
+const KIND_ICON={'Library':'📚','Place of worship':'⛪','Community center':'🏘️','Senior center':'🧓','School':'🏫','Grocery':'🛒','Pharmacy':'💊','Laundromat':'🧺'};
+function outreachBlock(r,s){
+  const o=(r.outreach_plan?.stops||[]).find(x=>x.saturday===s.saturday);if(!o)return '';
+  const chips=(o.places||[]).map(p=>`<span class="chip2">${KIND_ICON[p.kind]||'📍'} ${esc(p.name)} <small>${p.km_away} km</small></span>`).join('');
+  const hasMap=o.center?.lat!=null;
+  return `<div class="out"><div class="oh"><em>📣</em>Outreach</div>${o.headline?`<p class="hl">${esc(o.headline)}</p>`:''}
+   <ol>${o.channels.slice(0,5).map(c=>`<li><div class="ic">${CH_ICON[c.channel]||'✨'}</div><div><b>${esc(c.label)}</b><span>${esc(c.because)}</span></div></li>`).join('')}</ol>
+   ${hasMap?`<div class="omap" id="omap-${s.saturday}"></div>`:''}
+   ${chips?`<div class="row"><b>Places to post or ask</b></div><div class="chips">${chips}</div>`:''}
+   <p class="row"><b>🗣️ Print in:</b> ${(o.print_in||[]).map(esc).join(' and ')}</p>
+   ${o.caveat?`<p class="cv">${esc(o.caveat)}</p>`:''}</div>`}
+const omaps=[];
+function initOutreachMaps(r){
+  omaps.splice(0).forEach(m=>{try{m.remove()}catch(e){}});
+  (r.outreach_plan?.stops||[]).forEach(o=>{const el=document.getElementById('omap-'+o.saturday);if(!el||o.center?.lat==null)return;
+    const m=L.map(el,{scrollWheelZoom:false}).setView([o.center.lat,o.center.lon],14);omaps.push(m);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:17}).addTo(m);
+    const pts=[[o.center.lat,o.center.lon]];
+    L.marker([o.center.lat,o.center.lon],{icon:L.divIcon({className:'',html:`<div style="background:#c2620f;color:#fff;border-radius:50%;width:26px;height:26px;display:grid;place-items:center;font-weight:700;border:2px solid #fff">${o.saturday}</div>`})}).bindTooltip('Van stop area').addTo(m);
+    (o.places||[]).forEach(p=>{if(p.lat==null)return;pts.push([p.lat,p.lon]);
+      L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',iconSize:[26,26],html:`<div style="background:#fff;border-radius:50%;width:26px;height:26px;display:grid;place-items:center;font-size:14px;box-shadow:0 1px 4px rgba(0,0,0,.3)">${KIND_ICON[p.kind]||'📍'}</div>`})}).bindTooltip(`${esc(p.name)} (${esc(p.kind)})`).addTo(m)});
+    if(pts.length>1)m.fitBounds(pts,{padding:[24,24],maxZoom:15});setTimeout(()=>m.invalidateSize(),60)})}
 $('#en').onclick=()=>{LANG='en';$('#en').classList.add('on');$('#es').classList.remove('on');RUN&&renderNeighbors(RUN)};
 $('#es').onclick=()=>{LANG='es';$('#es').classList.add('on');$('#en').classList.remove('on');RUN&&renderNeighbors(RUN)};
 
