@@ -197,6 +197,8 @@ const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const api=(p,o)=>fetch(p,o).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
 const post=(p,b)=>api(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b||{})});
 let RUN=null,LANG='en',map,layer,poll;
+// Plain-English tract names (Census place + ZIP + tract no.) from the run record; falls back to the raw ID.
+const nm=g=>(RUN&&RUN.labels&&RUN.labels[g])||('Tract '+g);
 const GROUPS=[['pct_black','black_pop','Black'],['pct_hispanic','hispanic_pop','Hispanic'],['pct_white_non_hispanic','white_pop','White, non-Hispanic'],['pct_asian','asian_pop','Asian']];
 
 /* ---------- 1 Planner ---------- */
@@ -211,7 +213,7 @@ function renderPlanner(r){
   $('#cands').classList.remove('empty');
   $('#cands').innerHTML=`<table><tr><th>#</th><th>Tract</th><th>Score</th><th>Why it scored</th><th class="num">Uninsured</th><th class="num">No car</th><th class="num">To clinic</th></tr>
   ${rows.map(c=>`<tr class="${stops.includes(c.geo_id)?'chosen':''}"><td class="num">${c.rank}</td>
-   <td>${stops.includes(c.geo_id)?`<span class="sat">${sat[c.geo_id]}</span> `:''}${esc(c.geo_id)}</td><td class="num"><b>${c.score.toFixed(2)}</b></td>
+   <td>${stops.includes(c.geo_id)?`<span class="sat">${sat[c.geo_id]}</span> `:''}${esc(nm(c.geo_id))}</td><td class="num"><b>${c.score.toFixed(2)}</b></td>
    <td><div class="meter">${M(c,'uninsured','Insur.')}${M(c,'chronic','Chronic')}${M(c,'no_vehicle','No car')}${M(c,'carless_km','Distance')}</div></td>
    <td class="num">${c.pct_uninsured}%</td><td class="num">${c.pct_no_vehicle}%</td><td class="num">${c.km_to_safety_net} km</td></tr>`).join('')}</table>
   <div style="padding:10px 10px 0;font-size:12px;color:var(--muted)">Formula: ${esc(m.formula||'')}. ${esc(m.why||'')} Bars show where the tract ranks within the county.</div>`;
@@ -230,12 +232,12 @@ function renderPlan(r){
   layer?.remove();layer=L.layerGroup().addTo(map);
   if(sc.length){const mx=Math.max(...sc.map(s=>s.score)),mn=Math.min(...sc.map(s=>s.score));
     sc.forEach(s=>{const v=(s.score-mn)/(mx-mn||1);L.circleMarker([s.latitude,s.longitude],{radius:3,stroke:false,fillOpacity:.15+.75*v*v,fillColor:'#2f5bd3'})
-     .bindTooltip(`${s.geo_id} · rank ${s.rank}<br>uninsured ${s.pct_uninsured}% · no car ${s.pct_no_vehicle}% · ${s.km_to_safety_net} km`).addTo(layer)})}
+     .bindTooltip(`${esc(nm(s.geo_id))} · rank ${s.rank}<br>uninsured ${s.pct_uninsured}% · no car ${s.pct_no_vehicle}% · ${s.km_to_safety_net} km`).addTo(layer)})}
   const pts=[];st.forEach(s=>{const t=sc.find(x=>x.geo_id===s.geo_id);if(!t)return;pts.push([t.latitude,t.longitude]);
     L.marker([t.latitude,t.longitude],{icon:L.divIcon({className:'',html:`<div style="background:#c2620f;color:#fff;border-radius:50%;width:26px;height:26px;display:grid;place-items:center;font-weight:700;border:2px solid #fff">${s.saturday}</div>`})})
-     .bindPopup(`<b>Saturday ${s.saturday}</b> · ${s.geo_id}<br>${esc(s.reason)}`).addTo(layer)});
+     .bindPopup(`<b>Saturday ${s.saturday}</b> · ${esc(nm(s.geo_id))}<br>${esc(s.reason)}`).addTo(layer)});
   if(pts.length)map.fitBounds(pts,{padding:[60,60],maxZoom:12});setTimeout(()=>map.invalidateSize(),50);
-  $('#stops').innerHTML=st.map(s=>`<div class="stop"><h4><span class="sat">${s.saturday}</span>Saturday · tract ${esc(s.geo_id)}</h4><p>${esc(s.reason)}</p></div>`).join('')
+  $('#stops').innerHTML=st.map(s=>`<div class="stop"><h4><span class="sat">${s.saturday}</span>Saturday · ${esc(nm(s.geo_id))}</h4><p>${esc(s.reason)}</p></div>`).join('')
    +(r.final_plan?.tradeoffs?`<div class="stop"><h4>Trade-offs</h4><p>${esc(r.final_plan.tradeoffs)}</p></div>`:'')}
 
 /* ---------- 3 Auditor ---------- */
@@ -259,7 +261,7 @@ function renderAuditor(r){
       <div class="gap ${big?'big':''}">${g>0?'+':''}${g} pts</div></div>`}).join('')}
     <div style="font-size:12px;color:var(--muted)">Gap = plan minus highest-need tenth. Flagged above ${d.threshold_pts} points.</div>
     ${ps.length?`<h3 style="margin-top:22px">Each stop</h3><table><tr><th>Stop</th><th>Tract</th>${GROUPS.map(g=>`<th class="num">${g[2].split(',')[0]}</th>`).join('')}</tr>
-     ${ps.map((x,i)=>`<tr><td><span class="sat">${(r.final_plan.stops.find(s=>s.geo_id===x.geo_id)||{}).saturday||i+1}</span></td><td>${esc(x.geo_id)}</td>${GROUPS.map(g=>`<td class="num">${x[g[0]]??'–'}%</td>`).join('')}</tr>`).join('')}</table>`:''}`}
+     ${ps.map((x,i)=>`<tr><td><span class="sat">${(r.final_plan.stops.find(s=>s.geo_id===x.geo_id)||{}).saturday||i+1}</span></td><td>${esc(nm(x.geo_id))}</td>${GROUPS.map(g=>`<td class="num">${x[g[0]]??'–'}%</td>`).join('')}</tr>`).join('')}</table>`:''}`}
   renderDecision(r,s)}
 async function renderDecision(r,s){
   const hf=r.human_flags||[];if(!hf.length||s==='cleared'){$('#decision').innerHTML='';return}
@@ -289,7 +291,7 @@ function renderNeighbors(r){
   $('#neigh').innerHTML=st.map(s=>{const o=(O[s.saturday]||{})[LANG]||{},f=o.flyer,sy=o.say;
    const clean=b=>(b||'').replace(/^\*\*[^\n]*\*\*\s*\n+/,'');
    const sub=LANG==='en'?'Say at the door':'Para decir en la puerta';
-   return `<div class="nb"><div class="top"><span class="sat">${s.saturday}</span><div><b>${LANG==='en'?'Saturday':'Sábado'} ${s.saturday}</b><small>Tract ${esc(s.geo_id)}</small></div></div>
+   return `<div class="nb"><div class="top"><span class="sat">${s.saturday}</span><div><b>${LANG==='en'?'Saturday':'Sábado'} ${s.saturday}</b><small>${esc(nm(s.geo_id))}</small></div></div>
     <div class="body"><p class="why">${esc(s.reason)}</p>
     ${f?`<div class="flyer"><b>${LANG==='en'?'Flyer':'Folleto'}</b>${inline(clean(f.body))}</div>`:'<div class="empty">No cleared facts for this stop.</div>'}
     ${sy?`<div class="say"><small>${sub}</small>${inline(sy.body)}</div>`:''}${outreachBlock(r,s)}</div></div>`}).join('')

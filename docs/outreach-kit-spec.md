@@ -147,20 +147,21 @@ Per stop, add an **Outreach Kit** section:
 
 ## Running it locally without touching the live demo
 
-Local and cloud **share BigQuery memory**. Use the file backend locally so your test runs don't change
-what the live demo shows:
+The live app uses `a4i_health.agent_memory`. Locally, point at the dev table so your test runs don't
+change what the live demo shows:
 
 ```bash
 cd agentsforimpact-public-health
 export GOOGLE_APPLICATION_CREDENTIALS=$(ls ~/.config/gcloud/legacy_credentials/*/adc.json)
-export A4I_PROJECT=qwiklabs-gcp-03-1a6edb739e38 MEMORY_BACKEND=file
+export A4I_PROJECT=qwiklabs-gcp-03-1a6edb739e38
+export MEMORY_TABLE=qwiklabs-gcp-03-1a6edb739e38.a4i_health.agent_memory_dev   # BigQuery, but not the live demo's table
 toolbox/bin/toolbox --config toolbox/tools.yaml --port 5055 &      # see toolbox/README.md to download
 .venv/bin/python -m uvicorn dashboard.app:app --port 8090          # open http://127.0.0.1:8090
 ```
 
 (`agent/clinic_plan/.env` sets the project, `location=global` and the model. Copy it from
-`.env.example` if you don't have one. `MEMORY_BACKEND=file` writes `agent/memory_events.json`,
-which is gitignored.)
+`.env.example` if you don't have one. Offline alternative: `MEMORY_BACKEND=file`, which writes the
+gitignored `agent/memory_events.json`.)
 
 Quick test without the UI: `.venv/bin/python agent/run_once.py`.
 

@@ -92,7 +92,7 @@ def score_need(rows: list[dict], version: str, top_n: int = 25) -> dict:
                            interval=[r.tie_band_high, r.tie_band_low], null_state="ok",
                            caveats=["WITHIN_COUNTY_RANK", "NO_INTERVAL"], audit="not_reviewed")
         candidates.append(dict(
-            geo_id=r.geo_id, rank=int(r.rank), score=round(float(r.score), 4),
+            geo_id=r.geo_id, label=getattr(r, "label", None) or r.geo_id, rank=int(r.rank), score=round(float(r.score), 4),
             rank_band=[int(r.tie_band_high), int(r.tie_band_low)],
             need=round(float(r.need), 3), barrier=round(float(r.barrier), 3),
             total_pop=int(r.total_pop), latitude=float(r.latitude), longitude=float(r.longitude),
@@ -106,7 +106,9 @@ def score_need(rows: list[dict], version: str, top_n: int = 25) -> dict:
             hpsa_score=None if pd.isna(r.hpsa_score) else int(r.hpsa_score),
             claim_ids={**ids, "score": sid}))
 
-    all_scores = df[["geo_id", "score", "need", "rank", "latitude", "longitude", "pct_uninsured",
+    if "label" not in df:
+        df["label"] = df.geo_id
+    all_scores = df[["geo_id", "label", "score", "need", "rank", "latitude", "longitude", "pct_uninsured",
                      "pct_no_vehicle", "km_to_safety_net"]].to_dict("records")
     return dict(
         meta=dict(config_version=version, formula=cfg["label"], why=cfg["why"],

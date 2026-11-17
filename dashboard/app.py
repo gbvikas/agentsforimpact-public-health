@@ -10,7 +10,7 @@ import os
 import sys
 import time
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -142,6 +142,41 @@ async def field_report(req: FieldReq):
         trace.append(_event_record(ev))
     s = await runner.session_service.get_session(app_name="field_report", user_id="nurse", session_id=session.id)
     return {"record": s.state.get("field_record"), "trace": trace}
+
+
+def _speech_level(wav: bytes) -> float:
+    """Fraction of 16-bit samples louder than ~3% of full scale (a crude voice-activity check)."""
+    import array
+    i = wav.find(b"data")
+    pcm = array.array("h", wav[i + 8 if i >= 0 else 44:][: (len(wav) // 2) * 2 - 2])
+    return sum(1 for x in pcm[::4] if abs(x) > 1000) / max(len(pcm) // 4, 1)
+
+
+@app.post("/api/transcribe")
+async def transcribe(request: Request):
+    """Voice for the Field Reporter in any browser: the page records 16 kHz mono WAV, Gemini transcribes."""
+    audio = await request.body()
+    if not audio or len(audio) > 15_000_000:
+        raise HTTPException(400, "Send 1 byte to 15 MB of audio/wav")
+    from google import genai
+    client = genai.Client()
+    # 16 kHz mono 16-bit WAV is 32 KB per second; under ~0.75 s there is nothing to transcribe.
+    if len(audio) < 24_000:
+        return {"text": "", "note": "Recording too short. Hold Speak and talk for a few seconds."}
+    # Deterministic loudness gate: an LLM will happily "transcribe" silence, so check for sound first.
+    if _speech_level(audio) < 0.01:
+        return {"text": "", "note": "No speech heard. Check the microphone and try again."}
+    resp = await client.aio.models.generate_content(
+        model=os.environ.get("MODEL", "gemini-3.6-flash"),
+        contents=[types.Part.from_bytes(data=audio, mime_type=request.headers.get("content-type", "audio/wav")),
+                  "Transcribe the speech in this audio verbatim, in the language spoken (English or Spanish). "
+                  "Write only words you actually hear. Never invent, complete or summarize content. If there is "
+                  "no clear speech, reply with exactly NO_SPEECH. Return only the transcript."],
+        config=types.GenerateContentConfig(temperature=0))
+    text = (resp.text or "").strip()
+    if text == "NO_SPEECH":
+        return {"text": "", "note": "No clear speech heard. Try again closer to the microphone."}
+    return {"text": text}
 
 
 class AckReq(BaseModel):

@@ -36,7 +36,7 @@ statement: |
     FROM `${A4I_PROJECT}.a4i_health.shortage_areas`
     WHERE HPSA_STATUS_DESC = 'Designated'
     GROUP BY 1)
-  SELECT 'tract' AS scale, b.geo_id, b.total_pop, b.latitude, b.longitude,
+  SELECT 'tract' AS scale, b.geo_id, CONCAT(l.place, IF(l.zip IS NULL, '', CONCAT(' (', l.zip, ')')), ' · tract ', l.tract_no) AS label, b.total_pop, b.latitude, b.longitude,
          b.pct_uninsured, b.pct_diabetes, b.pct_high_bp, b.pct_copd,
          b.pct_no_vehicle, b.pct_limited_english, b.pct_age_65_plus,
          a.km_to_any_care, a.km_to_safety_net, a.extra_km_if_uninsured,
@@ -44,6 +44,7 @@ statement: |
   FROM `${A4I_PROJECT}.a4i_health.burden_tracts` b
   JOIN `${A4I_PROJECT}.a4i_health.tract_access` a USING (geo_id)
   LEFT JOIN hpsa h USING (geo_id)
+  LEFT JOIN `${A4I_PROJECT}.a4i_health.tract_labels` l USING (geo_id)
   WHERE b.total_pop >= @min_pop
 ---
 kind: tool
@@ -64,13 +65,14 @@ parameters:
       type: string
       description: 11-digit census tract ID.
 statement: |
-  SELECT 'tract' AS scale, b.geo_id, b.total_pop, b.pct_uninsured, b.pct_uninsured_all_ages,
+  SELECT 'tract' AS scale, b.geo_id, CONCAT(l.place, IF(l.zip IS NULL, '', CONCAT(' (', l.zip, ')')), ' · tract ', l.tract_no) AS label, b.total_pop, b.pct_uninsured, b.pct_uninsured_all_ages,
          b.pct_checkup, b.pct_diabetes, b.pct_high_bp, b.pct_copd, b.pct_asthma,
          b.pct_mobility_difficulty, b.pct_lack_transport, b.pct_no_vehicle, b.pct_age_65_plus,
          b.pct_limited_english, b.pct_no_internet,
          a.km_to_any_care, a.km_to_safety_net, a.extra_km_if_uninsured
   FROM `${A4I_PROJECT}.a4i_health.burden_tracts` b
   JOIN `${A4I_PROJECT}.a4i_health.tract_access` a USING (geo_id)
+  LEFT JOIN `${A4I_PROJECT}.a4i_health.tract_labels` l USING (geo_id)
   WHERE b.geo_id IN UNNEST(@geo_ids)
 ---
 kind: tool
@@ -129,12 +131,13 @@ statement: |
   WITH t AS (
     SELECT ST_GEOGPOINT(longitude, latitude) AS pt
     FROM `${A4I_PROJECT}.a4i_health.burden_tracts` WHERE geo_id = @geo_id)
-  SELECT 'tract' AS scale, b.geo_id,
+  SELECT 'tract' AS scale, b.geo_id, CONCAT(l.place, IF(l.zip IS NULL, '', CONCAT(' (', l.zip, ')')), ' · tract ', l.tract_no) AS label,
          ROUND(ST_DISTANCE(ST_GEOGPOINT(b.longitude, b.latitude), t.pt) / 1000, 2) AS km_from_tract,
          b.total_pop, b.pct_uninsured, b.pct_diabetes, b.pct_no_vehicle, b.pct_limited_english,
          a.km_to_safety_net
   FROM `${A4I_PROJECT}.a4i_health.burden_tracts` b
   JOIN `${A4I_PROJECT}.a4i_health.tract_access` a USING (geo_id)
+  LEFT JOIN `${A4I_PROJECT}.a4i_health.tract_labels` l USING (geo_id)
   CROSS JOIN t
   WHERE b.geo_id != @geo_id
   ORDER BY km_from_tract

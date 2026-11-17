@@ -128,11 +128,11 @@ async def run_score_need(state):
     version = state["score_config_version"]
     out = score_need(state["ev_tracts"], version)
     claims = {**out["claims"], **state.get("context_claims", {}), **state.get("field_claims", {})}
-    lines = ["rank | tract | score | rank band | uninsured% | no-vehicle% | km to safety net "
+    lines = ["rank | tract (place) | score | rank band | uninsured% | no-vehicle% | km to safety net "
              "| shortage score | claim ids"]
     for c in out["candidates"]:
         ids = c["claim_ids"]
-        lines.append(f"{c['rank']} | {c['geo_id']} | {c['score']} | {c['rank_band'][0]}-{c['rank_band'][1]} | "
+        lines.append(f"{c['rank']} | {c['geo_id']} ({c.get('label')}) | {c['score']} | {c['rank_band'][0]}-{c['rank_band'][1]} | "
                      f"{c['pct_uninsured']} | {c['pct_no_vehicle']} | "
                      f"{c['km_to_safety_net']} | {c['hpsa_score']} | "
                      f"{ids['pct_uninsured']}, {ids['pct_no_vehicle']}, "
@@ -215,11 +215,11 @@ async def finalize_plan(state):
             nxt = min(others, key=lambda r: km_between(me, r)) if others else None
         site = sites[0] if sites else {}
         facts = "; ".join(f"{c['measure']} = {c['value']}" for c in cleared)
-        nd = (f"Nearest tract not chosen: {nxt['geo_id']} ({km_between(me, nxt):.1f} km away): "
+        nd = (f"Nearest tract not chosen: {nxt.get('label', nxt['geo_id'])} ({km_between(me, nxt):.1f} km away): "
               f"uninsured {nxt['pct_uninsured']}%, no vehicle {nxt['pct_no_vehicle']}%, "
               f"km to a free/sliding-scale clinic {nxt['km_to_safety_net']}, need-score rank {nxt['rank']}."
               if nxt else "")
-        brief.append(f"Saturday {s.get('saturday')}: tract {g}. Cleared facts: {facts}. "
+        brief.append(f"Saturday {s.get('saturday')}: {(me or {}).get('label', 'tract ' + str(g))}. Cleared facts: {facts}. "
                      f"Nearest free/sliding-scale clinic: {site.get('name', 'unknown')} at "
                      f"{site.get('address', '?')}, {site.get('km_straight_line', '?')} km straight-line, "
                      f"{site.get('hours_per_week') or 'unpublished'} hours/week. {nd}")
@@ -285,6 +285,7 @@ async def limits_and_persist(state):
             "stop_details"]
     record = {k: state.get(k) for k in keys}
     record.update(run_id=run_id, limits=limits, claims=claims,
+                  labels={r["geo_id"]: r.get("label") for r in state.get("all_scores", [])},
                   all_scores=state.get("all_scores", []), memory_after=mem)
     with open(os.path.join(RUNS_DIR, f"{run_id}.json"), "w") as f:
         json.dump(record, f, indent=2, default=str)
