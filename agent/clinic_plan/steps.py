@@ -186,7 +186,7 @@ async def finalize_plan(state):
     cands = {c["geo_id"]: c for c in state["candidates"]}
     scores = state["all_scores"]
     stop_ids = [s.get("geo_id") for s in final.get("stops", [])]
-    brief = []
+    brief, details = [], []
     for s in final.get("stops", []):
         g = s.get("geo_id")
         cited = [cid for cid in s.get("claim_ids", []) if cid in claims and claims[cid]["scale"] == "tract"]
@@ -213,7 +213,10 @@ async def finalize_plan(state):
                      f"Nearest free/sliding-scale clinic: {site.get('name', 'unknown')} at "
                      f"{site.get('address', '?')}, {site.get('km_straight_line', '?')} km straight-line, "
                      f"{site.get('hours_per_week') or 'unpublished'} hours/week. {nd}")
-    return ({"final_plan": final, "claims": claims, "cleared_brief": "\n".join(brief)},
+        details.append({"saturday": s.get("saturday"), "geo_id": g, "clinic": site,
+                        "next_door": ({**nxt, "km_away": round(km_between(me, nxt), 1)} if nxt else None)})
+    return ({"final_plan": final, "claims": claims, "cleared_brief": "\n".join(brief),
+             "stop_details": details},
             f"Final plan: {len(stop_ids)} stops. Cleared claims, nearest clinic and 'next door' "
             f"comparison prepared for the Explainer.")
 
@@ -258,7 +261,7 @@ async def limits_and_persist(state):
     run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     os.makedirs(RUNS_DIR, exist_ok=True)
     keys = ["score_config_version", "score_meta", "candidates", "rounds", "final_plan", "human_flags",
-            "audit_passed", "outreach", "past_lessons", "recent_visits", "ev_context"]
+            "audit_passed", "outreach", "past_lessons", "recent_visits", "ev_context", "stop_details"]
     record = {k: state.get(k) for k in keys}
     record.update(run_id=run_id, limits=limits, claims=claims,
                   all_scores=state.get("all_scores", []), memory_after=mem)

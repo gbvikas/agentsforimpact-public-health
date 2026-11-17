@@ -66,7 +66,14 @@ class ApproveReq(BaseModel):
 
 
 @app.get("/")
-def index():
+def lead_view():
+    """Default: the outreach lead's view."""
+    return FileResponse(os.path.join(os.path.dirname(__file__), "lead.html"))
+
+
+@app.get("/console")
+def console():
+    """How we decided: the full engineering console."""
     return FileResponse(os.path.join(os.path.dirname(__file__), "index.html"))
 
 
