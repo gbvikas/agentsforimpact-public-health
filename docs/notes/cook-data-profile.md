@@ -23,3 +23,7 @@ Profiled 2026-11-17 via `scripts/profile_data.py`. **Loaded county is Cook IL (1
 - pct_limited_english p90 16.5% → multilingual outreach required.
 
 See [[data-traps]], [[solution-direction]].
+
+**Need score v0 (`sql/need_score.sql`, 2026-11-17):** 0.5·need (pr uninsured + pr chronic) + 0.4·barrier (pr no-vehicle + pr car-less km) + 0.1·HPSA. Top 10 = all South Side Chicago, all in HPSA tracts, ~50–67% no vehicle, 15–26% uninsured, span 16.7 km (clustered → need spacing rule). Score gap #10 vs #30 only 0.038 → treat top ~30 as a tie band, not a strict order. Distance-only lens top 10 = suburban 8240xx tracts, ~6% uninsured, ~0–2% no vehicle, need rank 500–1300 (the "obvious answer fails" slide).
+
+**Audit preview (ACS `bigquery-public-data.census_bureau_acs.censustract_2020_5yr`, all 1,328 tracts match):** county 23% Black / 25% Hispanic / 42% white NH. Score top-30 = **87% Black / 8% Hispanic**. Top-decile-uninsured tracts = **81% Hispanic**. → v0 plan under-serves the most-uninsured (Latino) neighborhoods because barrier weights no-vehicle and ignores language; chronic prevalence is PLACES-modeled (possible race leakage). This is the planner-vs-auditor disagreement / "rejected its first answer" demo moment. Candidate fixes: weight uninsured more, add pct_limited_english as an access barrier, spread 4 Saturdays across distinct communities.
