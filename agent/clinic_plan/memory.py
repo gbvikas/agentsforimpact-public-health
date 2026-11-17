@@ -5,6 +5,7 @@ Events (kind -> payload):
   lesson          {"source", "text"}                      rules learned from audits / human decisions
   config_change   {"from", "to", "approver", "reason"}    human approved new score_need weights
   decision        {"approver", "accepted_flags", "reason"} human accepted a plan with open flags
+  field_report    {"geo_id", "turnout", "barriers", ...}   nurse debrief, place-level only
   pending_flags   {"flags": [...]}                        human-routed flags awaiting a decision
   reset           {}                                      everything before this is ignored
 
@@ -23,7 +24,7 @@ from datetime import datetime, timezone
 BACKEND = os.environ.get("MEMORY_BACKEND", "bigquery")
 DEFAULT_CONFIG = "v0-blueprint"
 EMPTY = {"approved_config": DEFAULT_CONFIG, "config_history": [], "visits": [], "lessons": [],
-         "decisions": [], "pending_human_flags": [], "backend": BACKEND}
+         "decisions": [], "pending_human_flags": [], "field_reports": [], "backend": BACKEND}
 
 
 def now() -> str:
@@ -104,6 +105,8 @@ def _replay(events: list[dict]) -> dict:
             mem["approved_config"] = p.get("to", mem["approved_config"])
         elif k == "decision":
             mem["decisions"].append({**p, "date": ts})
+        elif k == "field_report":
+            mem["field_reports"].append({**p, "date": ts})
         elif k == "pending_flags":
             mem["pending_human_flags"] = p.get("flags", [])
     mem["event_count"] = len(events)

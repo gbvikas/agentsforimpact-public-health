@@ -22,6 +22,7 @@ from google.genai import types  # noqa: E402
 
 from clinic_plan import memory  # noqa: E402
 from clinic_plan.agent import root_agent  # noqa: E402
+from clinic_plan.field_report import field_report_flow  # noqa: E402
 from clinic_plan.steps import RUNS_DIR  # noqa: E402
 
 app = FastAPI(title="EquiVita")
@@ -113,6 +114,34 @@ def get_memory():
 @app.post("/api/approve")
 def approve(req: ApproveReq):
     return memory.approve_config(req.version, req.reason)
+
+
+class FieldReq(BaseModel):
+    geo_id: str
+    stop: str = ""
+    text: str
+
+
+@app.get("/field")
+def field_page():
+    """Nurse-facing page: speak or type the post-visit debrief."""
+    return FileResponse(os.path.join(os.path.dirname(__file__), "field.html"))
+
+
+@app.post("/api/field-report")
+async def field_report(req: FieldReq):
+    if len(req.text.strip()) < 10:
+        raise HTTPException(400, "Debrief is too short")
+    runner = InMemoryRunner(agent=field_report_flow, app_name="field_report")
+    session = await runner.session_service.create_session(
+        app_name="field_report", user_id="nurse",
+        state={"field_geo_id": req.geo_id, "field_stop": req.stop or req.geo_id, "field_text": req.text})
+    msg = types.Content(role="user", parts=[types.Part(text="Record this debrief.")])
+    trace = []
+    async for ev in runner.run_async(user_id="nurse", session_id=session.id, new_message=msg):
+        trace.append(_event_record(ev))
+    s = await runner.session_service.get_session(app_name="field_report", user_id="nurse", session_id=session.id)
+    return {"record": s.state.get("field_record"), "trace": trace}
 
 
 class AckReq(BaseModel):

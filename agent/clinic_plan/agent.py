@@ -38,6 +38,13 @@ What memory says (lessons from past audits and human decisions):
 {past_lessons}
 Tracts the van already visited in earlier months: {recent_visits}
 
+Field reports from the nurse practitioner after past Saturdays (ground truth our data cannot see:
+real travel barriers, free clinics missing from federal lists, what people asked for):
+{field_notes}
+If a field report says a tract already has free care nearby, or a barrier kept people away, prefer a
+nearby candidate across that barrier or a different tract, and cite the report ID (fr-...) in that
+stop's claim_ids and reason. Field reports are one day's observations: use them to adjust, not to rank.
+
 Auditor's revise request from the previous round (fix every item):
 {revise_request}
 

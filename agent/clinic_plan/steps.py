@@ -49,6 +49,8 @@ LIMIT_TEXT = {
     "DEMOGRAPHIC_DISPARITY": ("Whether the plan reaches the same people as the county's highest-need tracts.",
                               "The audit found a gap above the county threshold; a human must decide."),
     "NOT_AUDITED": ("Whether this plan passed audit.", "The audit did not finish."),
+    "FIELD_OBSERVATION": ("How typical one Saturday was.",
+                          "Field reports are one nurse's observations from one day, not a measurement."),
 }
 
 
@@ -84,11 +86,14 @@ async def recall_memory(state):
     mem = memory.load()
     lessons = "\n".join(f"- ({l['source']}, {l['date']}) {l['text']}" for l in mem["lessons"]) or "- none yet"
     visited = sorted({v["geo_id"] for v in mem["visits"]})
+    from .field_report import field_notes_and_claims  # local import: field_report imports this module
+    field_notes, field_claims = field_notes_and_claims(mem)
     return ({"score_config_version": mem["approved_config"], "past_lessons": lessons,
              "recent_visits": ", ".join(visited) or "none", "memory_snapshot": mem,
+             "field_notes": field_notes, "field_claims": field_claims,
              "round": 0, "rounds": [], "revise_request": "none (first draft)"},
             f"Memory: score config {mem['approved_config']}, {len(mem['lessons'])} lessons, "
-            f"{len(visited)} previously visited tracts.")
+            f"{len(visited)} previously visited tracts, {len(field_claims)} field report(s).")
 
 
 async def lookup_tracts(state):
@@ -120,7 +125,7 @@ async def lookup_context(state):
 async def run_score_need(state):
     version = state["score_config_version"]
     out = score_need(state["ev_tracts"], version)
-    claims = {**out["claims"], **state.get("context_claims", {})}
+    claims = {**out["claims"], **state.get("context_claims", {}), **state.get("field_claims", {})}
     lines = ["rank | tract | score | rank band | uninsured% | no-vehicle% | limited-English% | km to safety net "
              "| shortage score | claim ids"]
     for c in out["candidates"]:
@@ -313,7 +318,7 @@ async def check_plan(tool_context: ToolContext) -> dict:
         bad = [c for c in s.get("claim_ids", []) if c not in claims]
         if bad:
             flags.append({"code": "UNKNOWN_CLAIM", "claim_ids": bad, "route": "revise"})
-        wrong_scale = [c for c in s.get("claim_ids", []) if c in claims and claims[c]["scale"] != "tract"]
+        wrong_scale = [c for c in s.get("claim_ids", []) if c in claims and claims[c]["scale"] in ("county", "health_service_area")]
         if wrong_scale:
             flags.append({"code": "SCALE_MISUSE", "claim_ids": wrong_scale, "route": "revise"})
     chosen = [cands[s["geo_id"]] for s in stops if s.get("geo_id") in cands]
