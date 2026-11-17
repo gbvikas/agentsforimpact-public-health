@@ -52,7 +52,7 @@ function tractName(g){const t=g.slice(5);return`Census tract ${parseInt(t.slice(
 
 (async()=>{try{const ids=await api('/api/runs');if(!ids.length){$('#stop').innerHTML='<option value="">No plan yet</option>';return}
   const run=await api('/api/runs/'+ids[0]);const det=Object.fromEntries((run.stop_details||[]).map(d=>[d.geo_id,d]));
-  $('#stop').innerHTML=(run.final_plan?.stops||[]).map(s=>{const c=det[s.geo_id]?.clinic;const label=`Saturday ${s.saturday} · ${tractName(s.geo_id)}`;
+  $('#stop').innerHTML=(run.final_plan?.stops||[]).map(s=>{const c=det[s.geo_id]?.clinic;const label=`Saturday ${s.saturday} · ${(run.labels||{})[s.geo_id]||tractName(s.geo_id)}`;
     return `<option value="${esc(s.geo_id)}" data-label="${esc(label)}">${esc(label)}</option>`}).join('')}catch(e){$('#status').textContent='Could not load stops: '+e.message}})();
 
 $('#sample').onclick=()=>{$('#text').value="We parked at the church lot on the main road. Only 9 people came, way fewer than we hoped. Most of them walked over from the apartments on the other side of the expressway and said the underpass felt unsafe. Mrs. Alvarez, 67 years old, told me her sugar has been high. Four people asked if we take Medicaid. Someone mentioned a free clinic at St. Columba church a few blocks east that I didn't know about. Next time we should park on the apartment side of the expressway."};

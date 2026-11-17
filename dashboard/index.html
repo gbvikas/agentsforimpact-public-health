@@ -78,7 +78,8 @@ body.only header{display:none}body.only main>section{display:none}body.only main
 </main>
 <script>
 const $=s=>document.querySelector(s);const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const LLM=new Set(['planner','auditor','explainer']);let map,layer,poll;
+const LLM=new Set(['planner','auditor','explainer']);let map,layer,poll,LABELS={};
+const nm=g=>LABELS[g]||g;
 const api=(p,o)=>fetch(p,o).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()});
 
 function md(t){return esc(t).replace(/^### (.*)$/gm,'<h3>$1</h3>').replace(/^## (.*)$/gm,'<h3>$1</h3>').replace(/^# (.*)$/gm,'<h3>$1</h3>')
@@ -113,11 +114,11 @@ function renderMap(run){
   if(layer)layer.remove();layer=L.layerGroup().addTo(map);
   const sc=run.all_scores||[];if(!sc.length)return;const max=Math.max(...sc.map(s=>s.score)),min=Math.min(...sc.map(s=>s.score));
   sc.forEach(s=>{const v=(s.score-min)/(max-min||1);L.circleMarker([s.latitude,s.longitude],{radius:3,stroke:false,fillOpacity:.15+.75*v*v,fillColor:'#2f5bd3'})
-    .bindTooltip(`${s.geo_id} · rank ${s.rank}<br>uninsured ${s.pct_uninsured}% · no car ${s.pct_no_vehicle}% · ${s.km_to_safety_net} km`).addTo(layer)});
+    .bindTooltip(`${esc(nm(s.geo_id))} · rank ${s.rank}<br>uninsured ${s.pct_uninsured}% · no car ${s.pct_no_vehicle}% · ${s.km_to_safety_net} km`).addTo(layer)});
   const stops=run.final_plan?.stops||[];const pts=[];
   stops.forEach(st=>{const s=sc.find(x=>x.geo_id===st.geo_id);if(!s)return;pts.push([s.latitude,s.longitude]);
     L.marker([s.latitude,s.longitude],{icon:L.divIcon({className:'',html:`<div style="background:#c2620f;color:#fff;border-radius:50%;width:26px;height:26px;display:grid;place-items:center;font-weight:700;border:2px solid #fff">${st.saturday}</div>`})})
-    .bindPopup(`<b>Saturday ${st.saturday}</b> · ${st.geo_id}<br>${esc(st.reason)}`).addTo(layer)});
+    .bindPopup(`<b>Saturday ${st.saturday}</b> · ${esc(nm(st.geo_id))}<br>${esc(st.reason)}`).addTo(layer)});
   if(pts.length)map.fitBounds(pts,{padding:[60,60],maxZoom:12})}
 
 function renderPlan(run){
@@ -126,7 +127,7 @@ function renderPlan(run){
   $('#plan').innerHTML=`<div class="small">score_need <span class="pill code">${esc(meta.config_version)}</span> ${esc(meta.formula||'')}</div>
   <div class="small muted" style="margin:4px 0 8px">${esc(meta.why||'')} · ${meta.n_scored||0} tracts scored</div>
   <div>Audit: ${run.audit_passed?'<span class="pill ok">passed</span>':'<span class="pill bad">open revise flags</span>'} ${(run.human_flags||[]).length?'<span class="pill human">needs human decision</span>':''}</div>
-  <table style="margin-top:8px"><tr><th>Sat</th><th>Tract</th><th>Why</th></tr>${st.map(s=>`<tr><td><b>${s.saturday}</b></td><td>${esc(s.geo_id)}</td><td>${esc(s.reason)}<div class="small muted">${(s.claim_ids||[]).map(esc).join(' · ')}</div></td></tr>`).join('')}</table>
+  <table style="margin-top:8px"><tr><th>Sat</th><th>Tract</th><th>Why</th></tr>${st.map(s=>`<tr><td><b>${s.saturday}</b></td><td>${esc(nm(s.geo_id))}<div class="small muted">${esc(s.geo_id)}</div></td><td>${esc(s.reason)}<div class="small muted">${(s.claim_ids||[]).map(esc).join(' · ')}</div></td></tr>`).join('')}</table>
   ${run.final_plan?.tradeoffs?`<div class="small" style="margin-top:8px"><b>Trade-offs:</b> ${esc(run.final_plan.tradeoffs)}</div>`:''}`}
 
 function bars(d){if(!d)return'';const g=['black_pop','hispanic_pop','white_pop','asian_pop'],lab={black_pop:'Black',hispanic_pop:'Hispanic',white_pop:'White non-Hisp.',asian_pop:'Asian'};
@@ -137,7 +138,7 @@ function renderRounds(run){
   $('#rounds').classList.remove('empty');
   $('#rounds').innerHTML=`<div class="rounds">${rs.map(r=>`<div class="round"><h3>Round ${r.round} · ${r.verdict==='pass'?'<span class="pill ok">PASS</span>':'<span class="pill bad">REJECTED → revise</span>'}</h3>
    <div class="ctx"><div class="ctxA"><div class="small"><b>Planner draft</b> (Context A)</div>
-    ${(r.draft_plan?.stops||[]).map(s=>`<div class="small">Sat ${s.saturday}: <b>${esc(s.geo_id)}</b></div>`).join('')||'<div class="empty">unparseable</div>'}</div>
+    ${(r.draft_plan?.stops||[]).map(s=>`<div class="small">Sat ${s.saturday}: <b>${esc(nm(s.geo_id))}</b></div>`).join('')||'<div class="empty">unparseable</div>'}</div>
    <div class="ctxB"><div class="small"><b>Auditor findings</b> (Context B)</div>
     ${(r.flags||[]).map(f=>`<div class="small">${routePill(f.route)} <b>${esc(f.code)}</b> ${esc(f.detail||'')}</div>`).join('')||'<div class="small">no flags</div>'}</div></div>
    ${r.auditor_summary?`<div class="small" style="margin-top:8px">${esc(r.auditor_summary)}</div>`:''}
@@ -168,7 +169,7 @@ function renderClaims(run){const c=Object.values(run.claims||{});if(!c.length)re
   $('#claims').innerHTML=`<div style="max-height:320px;overflow:auto"><table><tr><th>claim</th><th>measure</th><th>value</th><th>scale</th><th>source</th><th>caveats</th><th>audit</th></tr>
   ${c.map(x=>`<tr><td><code>${esc(x.claim_id)}</code></td><td>${esc(x.measure)}</td><td>${esc(typeof x.value==='object'?JSON.stringify(x.value).slice(0,80):x.value)}</td><td><span class="pill ${sp[x.scale]||''}">${esc(x.scale)}</span></td><td class="small">${esc(x.source)}</td><td class="small">${(x.caveats||[]).map(esc).join(', ')}</td><td><span class="pill ${ad[x.audit]||''}">${esc(x.audit)}</span></td></tr>`).join('')}</table></div>`}
 
-async function loadRun(id){const run=await api('/api/runs/'+id);const mem=await api('/api/memory');
+async function loadRun(id){const run=await api('/api/runs/'+id);LABELS=run.labels||{};const mem=await api('/api/memory');
   renderMap(run);renderPlan(run);renderRounds(run);renderLimits(run);renderClaims(run);renderDecision(run,mem);
   $('#outreach').classList.toggle('empty',!run.outreach);$('#outreach').innerHTML=run.outreach?md(run.outreach):'No flyer.';renderMemory(mem)}
 
