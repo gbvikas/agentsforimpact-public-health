@@ -245,20 +245,22 @@ async def limits_and_persist(state):
         raise RuntimeError("Empty limits list is an error, not 'nothing to report'.")
 
     # memory: remember visits and learn from this run's revise flags (codes and rules only)
-    mem = memory.load()
+    run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     month = datetime.now().strftime("%Y-%m")
-    for s in final.get("stops", []):
-        mem["visits"].append({"month": month, "geo_id": s.get("geo_id"), "saturday": s.get("saturday")})
+    known = {l["text"] for l in memory.load()["lessons"]}
+    events = [{"kind": "visit", "payload": {"month": month, "geo_id": s.get("geo_id"), "saturday": s.get("saturday")}}
+              for s in final.get("stops", [])]
     for r in state.get("rounds", []):
         for f in r["flags"]:
-            if f["route"] == "revise":
-                memory.add_lesson(mem, f"Avoid {f['code']}: {LIMIT_TEXT.get(f['code'], ('', f['code']))[1]}",
-                                  "auditor")
-    mem["pending_human_flags"] = [{"code": f["code"], "detail": f.get("detail", "")}
-                                  for f in state.get("human_flags", [])]
-    memory.save(mem)
+            text = f"Avoid {f['code']}: {LIMIT_TEXT.get(f['code'], ('', f['code']))[1]}"
+            if f["route"] == "revise" and text not in known:
+                events.append(memory.lesson(text, "auditor"))
+                known.add(text)
+    events.append({"kind": "pending_flags", "payload": {"flags": [
+        {"code": f["code"], "detail": f.get("detail", "")} for f in state.get("human_flags", [])]}})
+    memory.append([{**e, "run_id": run_id} for e in events])
+    mem = memory.load()
 
-    run_id = datetime.now().strftime("%Y%m%d-%H%M%S")
     os.makedirs(RUNS_DIR, exist_ok=True)
     keys = ["score_config_version", "score_meta", "candidates", "rounds", "final_plan", "human_flags",
             "audit_passed", "outreach", "past_lessons", "recent_visits", "ev_context", "stop_details"]

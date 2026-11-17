@@ -126,5 +126,4 @@ def acknowledge(req: AckReq):
 
 @app.post("/api/reset-memory")
 def reset_memory():
-    memory.save(json.loads(json.dumps(memory.EMPTY)))
-    return memory.load()
+    return memory.reset()

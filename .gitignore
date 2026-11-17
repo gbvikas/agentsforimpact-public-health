@@ -25,3 +25,4 @@ Thumbs.db
 toolbox/bin/
 agent/runs/*.json
 agent/memory_store.json
+agent/memory_events.json
