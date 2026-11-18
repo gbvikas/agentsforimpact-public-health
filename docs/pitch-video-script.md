@@ -46,7 +46,9 @@ Explanation agents behind it).
 
 > **"Four dated Saturdays in plain language: about one in four adults uninsured, one in three homes
 > without a car, the nearest free clinic for follow-up, and why this neighborhood and not the one next
-> door.** Plus a flyer and door script in English and Spanish."
+> door.** Plus a flyer and door script in English and Spanish, and an outreach plan per stop: code picks
+> the channels from the data, like posters and radio where many homes have no internet or Spanish-first
+> where English is limited, and an agent orders them using real nearby places."
 
 ## 1:30 – 2:05 · Live: how it decided (technical strength)
 
@@ -74,9 +76,11 @@ Say into the mic:
 
 ## 2:35 – 3:00 · Slide: Impact, limits, stack
 
-> **"Need-first plans reach tracts where a quarter of adults are uninsured, up from under one in ten, and
-> 29 of the top 30 are federal shortage areas, up from none.** One finding stays open: four stops can't
-> mirror the county's most-uninsured, mostly Hispanic neighborhoods, and we say so."
+> **"Need-first plans reach tracts where nearly one in five adults is uninsured, up from under one in ten,
+> and all top 30 are federal shortage areas, up from none.** One finding stays open: the plan lands mostly
+> in Black neighborhoods while the county's most-uninsured are mostly Hispanic. We chose not to score on
+> language, so it can't act as a stand-in for ethnicity; language picks the outreach channels instead.
+> The flag stays open for a person to decide, and we say so."
 
 > **"Every number carries its scale: air quality is a 12 km grid that varies 6 percent, so we never rank
 > on it; prevalence is modeled; distances are upper bounds. ADK, Gemini, MCP Toolbox, BigQuery, Cloud Run.
@@ -105,13 +109,15 @@ EquiVita · "Where the mobile clinic parks next month, and why" · team · Agent
 
 | | Distance-first (intuitive) | Need-first (human-approved) |
 |---|---|---|
-| Median uninsured, top 30 tracts | 8.6% (below county median 10.4%) | 24.5% |
-| Top 30 in a federal shortage area | 0 | 29 |
+| Median uninsured, top 30 tracts | 8.6% (below county median 10.5%) | 18.0% |
+| Top 30 in a federal shortage area | 0 | 30 |
+| Median homes without a car, top 30 | 7.0% | 49.5% |
 | Correlation, distance vs no car | −0.65 | n/a |
 
 - What changes for each user: a calendar-ready plan with reasons; bilingual flyers and door scripts;
   a voice debrief that improves next month's plan.
-- Honest open finding: the most-uninsured tenth of tracts is 82% Hispanic; four stops can't mirror it.
+- Honest open finding: need-first top 30 is 85% Black / 11% Hispanic; the most-uninsured tenth is 82% Hispanic.
+  Limited English is deliberately not scored (too close to an ethnicity proxy); it chooses outreach channels.
 - Performance: full plan in ~65 s on Cloud Run; 1,328 tracts scored in 3 s; voice transcribed in ~2 s.
 
 ## 4 · Intel Sources
@@ -146,5 +152,4 @@ required as an audit; that rule forced a blind planner and a separate auditor."*
 
 ## 7 · Limits and next
 Limits: straight-line distance, federal sites only, modeled prevalence, regional disease data, no
-confidence intervals loaded, Spanish as the only second language. Next: Outreach Kit (data-chosen
-channels), travel-time data, a low-latency memory store (Cloud SQL / Firestore).
+confidence intervals loaded, Spanish as the only second language. Next: travel-time data, more languages, a low-latency memory store (Cloud SQL / Firestore).

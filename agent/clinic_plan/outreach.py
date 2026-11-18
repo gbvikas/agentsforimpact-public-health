@@ -1,7 +1,8 @@
 """Outreach: how to reach the neighborhood around each stop. New file, so it stays clear of other work.
 
   plan_channels   code step. Rules pick the channels (never the LLM), from tract data via MCP Toolbox, and
-                  look up named public places near each stop on the map (OpenStreetMap Overpass, no key).
+                  look up named public places near each stop (Overture Maps places, BigQuery public data,
+                  CDLA-Permissive-2.0; no key).
   check_outreach  code step. Keeps the LLM's reasoning only where it uses channels code picked and places
                   that are really on the map list.
 The LLM agent in between (agent.py) explains and prioritizes. It cannot add a channel or a place.
