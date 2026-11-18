@@ -43,3 +43,11 @@ person, it is an automatic rejection**, however useful it would have been.
 
 Put small reference files here and commit them. Anything large, or anything pulled live, belongs in
 BigQuery rather than in git.
+
+## Tables EquiVita added to `a4i_health`
+
+| Table | What it holds |
+|---|---|
+| `tract_labels` | Plain-English tract names: Census place + ZIP + tract number (from `bigquery-public-data.geo_us_boundaries.zip_codes`) |
+| `agent_memory` | The live app's memory: append-only events (visit, lesson, config_change, decision, field_report, reset). No demographic data |
+| `agent_memory_dev` | Same schema, for local development runs |

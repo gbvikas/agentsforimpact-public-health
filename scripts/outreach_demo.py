@@ -1,7 +1,7 @@
 """Print an outreach card for each stop of a saved run.
 
 Usage: .venv/bin/python scripts/outreach_demo.py [run_id]      (default: newest run)
-Needs gcloud application-default login (reads BigQuery). Calls OpenStreetMap Overpass (no key).
+Needs gcloud credentials (reads BigQuery, including Overture Maps places in BigQuery public data).
 """
 import glob
 import json

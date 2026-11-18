@@ -54,7 +54,7 @@ Explanation agents behind it).
 
 **Screen:** "How we decided" → trace with state keys → Planner ⇄ Auditor rounds (or PDF backup).
 
-> **"Four agents, built on Google ADK. The planner's MCP Toolbox toolset has no demographic tool, so it
+> **"Five agents, built on Google ADK. The planner's MCP Toolbox toolset has no demographic tool, so it
 > can't even ask for race. The auditor runs in a separate context with census data. They pass state:
 > `draft_plan`, `audit_verdict`, `revise_request`, and a code gate strips anything demographic.**
 > Here it rejected its own first draft, two stops 3.9 km apart, and revised. The auditor's instructions
