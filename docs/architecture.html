@@ -1,0 +1,74 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;width:1600px;height:900px;background:#fbfaf7;font:15px/1.35 -apple-system,Segoe UI,Inter,sans-serif;color:#1d2433;position:relative;overflow:hidden}
+h1{position:absolute;left:48px;top:30px;margin:0;font-size:30px;letter-spacing:-.01em}
+.sub{position:absolute;left:48px;top:72px;color:#667085;font-size:16px}
+.legend{position:absolute;right:48px;top:38px;display:flex;gap:14px;font-size:13px;color:#475467}
+.legend span{display:inline-flex;align-items:center;gap:6px}.sw{width:14px;height:14px;border-radius:4px;border:2px solid}
+.b{position:absolute;border-radius:12px;padding:10px 12px;border:2px solid;background:#fff;box-shadow:0 1px 2px #0000000d}
+.b b{display:block;font-size:15.5px;margin-bottom:3px}.b small{color:#475467;font-size:12.5px;display:block}
+.llm{border-color:#2f5bd3}.llm b{color:#2f5bd3}
+.code{border-color:#c2620f;background:#fffaf4}.code b{color:#b4540a}
+.hum{border-color:#1d2433;background:#1d2433;color:#fff}.hum small{color:#cbd2dc}
+.data{border-color:#0f766e;background:#f0faf8}.data b{color:#0f766e}
+.zone{position:absolute;border:2px dashed;border-radius:16px}
+.zl{position:absolute;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+svg{position:absolute;left:0;top:0}
+.tag{position:absolute;font-size:12px;color:#475467;background:#fbfaf7;padding:0 4px}
+</style></head><body>
+<h1>EquiVita · prototype architecture</h1>
+<div class="sub">Google ADK multi-agent workflow on Cloud Run · data through MCP Toolbox over BigQuery · memory as a BigQuery event log</div>
+<div class="legend"><span><i class="sw" style="border-color:#2f5bd3"></i>LLM agent (Gemini)</span><span><i class="sw" style="border-color:#c2620f;background:#fffaf4"></i>Deterministic code / our tools</span><span><i class="sw" style="border-color:#0f766e;background:#f0faf8"></i>Data</span><span><i class="sw" style="border-color:#1d2433;background:#1d2433"></i>Human</span></div>
+
+<!-- Zones -->
+<div class="zone" style="left:620px;top:150px;width:300px;height:330px;border-color:#9db4ee;background:#f4f7fe"></div><div class="zl" style="left:636px;top:160px;color:#2f5bd3">Context A · blind to demographics</div>
+<div class="zone" style="left:945px;top:150px;width:300px;height:330px;border-color:#efb98a;background:#fff8f1"></div><div class="zl" style="left:961px;top:160px;color:#b4540a">Context B · sees census race data</div>
+
+<!-- Row 1 -->
+<div class="b hum" style="left:48px;top:150px;width:150px"><b style="color:#fff">Outreach lead</b><small>"Plan next month"</small></div>
+<div class="b code" style="left:230px;top:150px;width:170px"><b>recall_memory</b><small>approved weights, visits, lessons, field reports</small></div>
+<div class="b code" style="left:230px;top:262px;width:170px"><b>Parallel lookups</b><small>burden + access ‖ context<br>(scale-tagged claims)</small></div>
+<div class="b code" style="left:430px;top:200px;width:160px"><b>score_need</b><small>versioned weights · 1,328 tracts in 3 s · tie bands</small></div>
+<div class="b llm" style="left:640px;top:195px;width:260px"><b>Planner</b><small>picks 4 Saturdays ≥5 km apart, cites claim IDs · tool: stop_distances · Toolbox toolset <i>planner_drilldown</i> (no demographic tools)</small></div>
+<div class="b llm" style="left:965px;top:195px;width:260px"><b>Auditor</b><small>hedge · cite · refuse. Tool check_plan: spacing, claim validity, scale misuse, ties, demographic disparity · Toolbox toolset <i>auditor</i></small></div>
+<div class="b code" style="left:780px;top:370px;width:300px"><b>audit_gate</b><small>revise → Planner gets flag codes only, never demographics · max 2 rounds</small></div>
+<div class="b hum" style="left:1290px;top:150px;width:260px"><b style="color:#fff">Human decision</b><small>disparity flags route here, not to the Planner · approve new weights or accept with flag on record</small></div>
+<div class="b llm" style="left:1290px;top:282px;width:260px"><b>Explainer</b><small>warm · plain · never hedges · EN + ES flyer, door script, "why not next door" · cleared claims only</small></div>
+<div class="b code" style="left:1290px;top:410px;width:260px"><b>Limits list + run record</b><small>built by code from the claims ledger: what we couldn't tell you, and why</small></div>
+
+<!-- Row 2: field loop -->
+<div class="b hum" style="left:470px;top:560px;width:150px"><b style="color:#fff">Nurse practitioner</b><small>speaks a debrief after Saturday</small></div>
+<div class="b code" style="left:660px;top:560px;width:190px"><b>Voice → Gemini</b><small>in-page WAV · loudness gate · transcribed in ~2 s</small></div>
+<div class="b llm" style="left:890px;top:560px;width:220px"><b>Field Reporter</b><small>keeps place-level facts: turnout, barriers, unlisted clinics, asks one follow-up</small></div>
+<div class="b code" style="left:1150px;top:560px;width:190px"><b>Privacy gate</b><small>removes names, ages, phones, emails in code</small></div>
+
+<!-- Data layer -->
+<div class="b data" style="left:48px;top:725px;width:560px"><b>MCP Toolbox for Databases (private Cloud Run)</b><small>9 fixed-SQL BigQuery tools, one toolset per agent → BigQuery <i>a4i_health</i>: CDC PLACES, CDC/ATSDR SVI, HRSA + CMS sites, HRSA shortage areas, EPA PM2.5, CDC NSSP, tract labels · Census ACS race (auditor toolset only)</small></div>
+<div class="b data" style="left:640px;top:725px;width:420px"><b>Memory: BigQuery a4i_health.agent_memory</b><small>append-only events: visit · lesson · config_change · decision · field_report · reset. No demographic data, ever.</small></div>
+<div class="b data" style="left:1090px;top:725px;width:460px"><b>EquiVita app (public Cloud Run)</b><small>outreach-lead view · "How we decided" console · /field for nurses · FastAPI + ADK runner · Gemini 3.6 Flash on Vertex AI</small></div>
+
+<svg width="1600" height="900"><defs><marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#667085"/></marker>
+<marker id="r" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 z" fill="#c0262d"/></marker></defs>
+<g stroke="#667085" stroke-width="2" fill="none" marker-end="url(#a)">
+<path d="M200,185 L228,185"/><path d="M140,214 L140,300 L228,300"/>
+<path d="M402,190 L428,225"/><path d="M402,300 L428,250"/>
+<path d="M592,235 L638,235"/>
+<path d="M902,235 L963,235"/>
+<path d="M1095,300 L1000,368"/>
+<path d="M1227,215 L1288,190"/>
+<path d="M1227,250 L1288,315"/>
+<path d="M1420,385 L1420,408"/>
+<path d="M622,595 L658,595"/><path d="M852,595 L888,595"/><path d="M1112,595 L1148,595"/>
+<path d="M1240,640 L1000,722"/>
+<path d="M700,723 L700,690 L212,690 L212,222 L228,222" stroke-dasharray="6 5"/>
+<path d="M330,723 L330,345"/>
+</g>
+<path d="M800,368 L760,300" stroke="#c0262d" stroke-width="2" fill="none" marker-end="url(#r)" stroke-dasharray="6 5"/>
+</svg>
+<div class="tag" style="left:906px;top:214px">draft_plan</div>
+<div class="tag" style="left:1012px;top:318px">audit_verdict</div>
+<div class="tag" style="left:690px;top:322px;color:#c0262d">revise_request (codes only)</div>
+<div class="tag" style="left:1232px;top:176px">disparity</div>
+<div class="tag" style="left:1240px;top:298px">pass</div>
+<div class="tag" style="left:420px;top:680px">next month reads memory (visits, lessons, field reports)</div>
+<div class="tag" style="left:340px;top:520px">lookups via MCP</div>
+</body></html>
