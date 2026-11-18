@@ -38,7 +38,7 @@ Explanation agents behind it).
 > need-first scoring, and that decision is saved in memory, an append-only log in BigQuery."
 
 > "Re-planning takes about a minute: data for all 1,328 tracts comes through MCP Toolbox and is scored in
-> 3 seconds; the rest is four agents thinking and checking each other."
+> 3 seconds; the rest is the agents thinking and checking each other."
 
 ## 1:05 – 1:30 · Live: the plan (usability)
 
