@@ -147,16 +147,16 @@ function renderRounds(run){
 
 function renderDecision(run,mem){
   const hf=run.human_flags||[];$('#decisionCard').hidden=!hf.length;if(!hf.length)return;
-  const canSwitch=mem.approved_config!=='v1';
-  const dflt=canSwitch?'v0 sent the van to insured suburbs; the audit showed the plan missed the most-uninsured neighborhoods. Need should lead and distance should only count without a car.'
-    :'Four stops cannot mirror the whole most-uninsured tenth; keep v1 and add a Spanish-language West/Southwest Side stop next month.';
+  const canSwitch=mem.approved_config!=='need-first';
+  const dflt=canSwitch?'Distance-first sent the van to insured suburbs; the audit showed the plan missed the most-uninsured neighborhoods. Need should lead and distance should only count without a car.'
+    :'Four stops cannot mirror the whole most-uninsured tenth; keep need-first and add a Spanish-language West/Southwest Side stop next month.';
   $('#decision').innerHTML=`<h3 style="margin-top:0">🧑‍⚖️ Human decision needed</h3>${hf.map(f=>`<div>${routePill('human')} <b>${esc(f.code)}</b> ${esc(f.detail||'')}</div>`).join('')}
    <p class="small">The Auditor may not steer the Planner by demographics. The outreach lead decides: change the scoring weights, or accept the plan with the flag on record. Either choice is remembered.</p>
    <input id="reason" style="width:min(640px,100%)" value="${esc(dflt)}">
-   ${canSwitch?'<button class="primary" id="approveBtn">Approve config v1</button>':''}
+   ${canSwitch?'<button class="primary" id="approveBtn">Approve need-first scoring</button>':''}
    <button id="ackBtn">Accept plan, flag on record</button>`;
   const done=async m=>{$('#decisionCard').hidden=true;renderMemory(await api('/api/memory'));$('#status').textContent=m};
-  if(canSwitch)$('#approveBtn').onclick=async()=>{await api('/api/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:'v1',reason:$('#reason').value})});done('Approved v1. Run the planner again.')};
+  if(canSwitch)$('#approveBtn').onclick=async()=>{await api('/api/approve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:'need-first',reason:$('#reason').value})});done('Approved need-first scoring. Run the planner again.')};
   $('#ackBtn').onclick=async()=>{await api('/api/acknowledge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({reason:$('#reason').value})});done('Plan accepted with flag on record.')}}
 
 function renderLimits(run){const l=run.limits||[];$('#limits').classList.toggle('empty',!l.length);
@@ -176,7 +176,7 @@ async function loadRun(id){const run=await api('/api/runs/'+id);LABELS=run.label
 async function refreshRuns(sel){const ids=await api('/api/runs');$('#runSel').innerHTML='<option value="">past runs…</option>'+ids.map(i=>`<option ${i===sel?'selected':''}>${i}</option>`).join('')}
 
 $('#runSel').onchange=e=>e.target.value&&loadRun(e.target.value);
-$('#resetBtn').onclick=async()=>{if(!confirm('Clear memory (config back to v0-blueprint, no lessons, no visits)?'))return;renderMemory(await api('/api/reset-memory',{method:'POST'}));$('#status').textContent='Memory reset.'};
+$('#resetBtn').onclick=async()=>{if(!confirm('Clear memory (config back to distance-first, no lessons, no visits)?'))return;renderMemory(await api('/api/reset-memory',{method:'POST'}));$('#status').textContent='Memory reset.'};
 $('#runBtn').onclick=async()=>{$('#runBtn').disabled=true;$('#status').textContent='Running…';
   try{await api('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})}catch(e){$('#status').textContent='Could not start: '+e;$('#runBtn').disabled=false;return}
   clearInterval(poll);poll=setInterval(async()=>{const l=await api('/api/live');renderTimeline(l.events);

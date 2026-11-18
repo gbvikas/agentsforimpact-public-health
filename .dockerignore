@@ -7,3 +7,4 @@ agent/runs/*.json
 agent/memory_store.json
 agent/clinic_plan/.env
 **/__pycache__/
+agent/clinic_plan/.adk/

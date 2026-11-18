@@ -7,13 +7,21 @@ import math
 
 import pandas as pd
 
+# Old ids are stored in agent memory (BigQuery) and in saved runs, so they stay valid as aliases.
+LEGACY_CONFIG_IDS = {"v0-blueprint": "distance-first", "v1": "need-first"}
+
+
+def canonical_config(version: str) -> str:
+    return LEGACY_CONFIG_IDS.get(version, version)
+
+
 SCORE_CONFIGS = {
-    "v0-blueprint": {
+    "distance-first": {
         "label": "need_pct x km_to_safety_net x (1 + no-vehicle pct)",
         "kind": "product",
         "why": "The intuitive formula: most need, least access. Multiplying by km rewards distance.",
     },
-    "v1": {
+    "need-first": {
         "label": ".55 need (.6 uninsured, .4 chronic) + .35 barrier (no vehicle, "
                  "car-less km) + .10 shortage area",
         "kind": "additive",
@@ -39,6 +47,7 @@ def _pr(s: pd.Series) -> pd.Series:
 
 
 def score_need(rows: list[dict], version: str, top_n: int = 25) -> dict:
+    version = canonical_config(version)
     cfg = SCORE_CONFIGS[version]
     df = pd.DataFrame(rows)
     needed = ["pct_uninsured", "pct_diabetes", "pct_high_bp", "pct_copd", "pct_no_vehicle",

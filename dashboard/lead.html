@@ -265,13 +265,13 @@ function renderAuditor(r){
   renderDecision(r,s)}
 async function renderDecision(r,s){
   const hf=r.human_flags||[];if(!hf.length||s==='cleared'){$('#decision').innerHTML='';return}
-  const mem=await api('/api/memory'),can=mem.approved_config!=='v1';
+  const mem=await api('/api/memory'),can=mem.approved_config!=='need-first';
   const dflt=can?'The first formula sent the van to remote suburbs. Need should lead, and distance should only count for households without a car.':'Four stops cannot mirror the whole highest-need group. Keep this version and add a stop in an under-served area next month.';
   $('#decision').innerHTML=`<div class="card decide" style="margin-top:16px"><b>Your decision</b>
    <div style="color:var(--muted);font-size:13.5px;margin-top:2px">Change the scoring weights, or accept this plan with the finding on record. Either choice is remembered.</div>
-   <input id="reason" value="${esc(dflt)}">${can?'<button class="primary" id="ap">Switch to v1 weights</button> ':''}<button id="ack">Accept plan, keep finding on record</button></div>`;
+   <input id="reason" value="${esc(dflt)}">${can?'<button class="primary" id="ap">Switch to need-first scoring</button> ':''}<button id="ack">Accept plan, keep finding on record</button></div>`;
   const done=async t=>{$('#decision').innerHTML=`<div class="card" style="margin-top:16px">${t}</div>`;renderMemory(await api('/api/memory'))};
-  if(can)$('#ap').onclick=async()=>{await post('/api/approve',{version:'v1',reason:$('#reason').value});done('Switched to v1 weights. Run the planner again to see the new plan.')};
+  if(can)$('#ap').onclick=async()=>{await post('/api/approve',{version:'need-first',reason:$('#reason').value});done('Switched to need-first scoring. Run the planner again to see the new plan.')};
   $('#ack').onclick=async()=>{await post('/api/acknowledge',{reason:$('#reason').value});done('Plan accepted. The finding stays on record.')}}
 
 /* ---------- 4 Neighbors ---------- */

@@ -21,8 +21,10 @@ import json
 import os
 from datetime import datetime, timezone
 
+from .scoring import canonical_config
+
 BACKEND = os.environ.get("MEMORY_BACKEND", "bigquery")
-DEFAULT_CONFIG = "v0-blueprint"
+DEFAULT_CONFIG = "distance-first"
 EMPTY = {"approved_config": DEFAULT_CONFIG, "config_history": [], "visits": [], "lessons": [],
          "decisions": [], "pending_human_flags": [], "field_reports": [], "backend": BACKEND}
 
@@ -101,6 +103,7 @@ def _replay(events: list[dict]) -> dict:
             if not any(l["text"] == p.get("text") for l in mem["lessons"]):
                 mem["lessons"].append({"date": ts, "source": p.get("source"), "text": p.get("text")})
         elif k == "config_change":
+            p = {**p, **{k: canonical_config(p[k]) for k in ("from", "to") if p.get(k)}}
             mem["config_history"].append({**p, "date": ts})
             mem["approved_config"] = p.get("to", mem["approved_config"])
         elif k == "decision":
@@ -144,6 +147,7 @@ def acknowledge_flags(reason: str, approver: str = "outreach lead") -> dict:
 
 def approve_config(version: str, reason: str, approver: str = "outreach lead") -> dict:
     """Human action: switch the weights score_need uses on the next run."""
+    version = canonical_config(version)
     current = load()["approved_config"]
     append([{"kind": "config_change", "payload": {"from": current, "to": version, "approver": approver,
                                                  "reason": reason}},
